@@ -1,34 +1,56 @@
-﻿cmake_minimum_required(VERSION 3.15)
+﻿cmake_minimum_required(VERSION 3.20)
+project(collection-manager LANGUAGES C CXX)
 
-# enter your project name/application output name
-project(template LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+set(CMAKE_BUILD_PARALLEL_LEVEL 16)
 
-set(CMAKE_CXX_STANDARD 20) #cpp version
-set(CMAKE_CXX_SCAN_FOR_MODULES ON)
+include(FetchContent)
 
-# Base directories
-set(BASE_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/src/includes")
-set(BASE_LIB_PATH "${CMAKE_SOURCE_DIR}/src/libs")
+macro(fetch name repo tag)
+    FetchContent_Declare(${name} GIT_REPOSITORY ${repo} GIT_TAG ${tag})
+    FetchContent_MakeAvailable(${name})
+endmacro()
 
-# STATIC LIB, you are a stupid fuck if u dont
-option(USE_STATIC_LIB "Use static library" ON)
+fetch(Crow https://github.com/CrowCpp/Crow.git v1.3.2)
+fetch(nlohmann_json https://github.com/nlohmann/json.git v3.12.0)
 
-# Debug/Release-specific paths
-#[===[
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    #set(BUILD_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/cmake-template-project/includes/Debug/")
-    #set(BUILD_LIB_PATH "${CMAKE_SOURCE_DIR}/src/libs/LIB_Debug/")
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    #set(BUILD_INCLUDE_PATH "${CMAKE_SOURCE_DIR}/cmake-template-project/includes/Release/")
-    #set(BUILD_LIB_PATH "${CMAKE_SOURCE_DIR}/src/libs/LIB_Release/")
-endif()
-]===]
+find_package(ZLIB REQUIRED)
 
-# Add the include directories for the project
-include_directories(${BASE_INCLUDE_PATH} ${BUILD_INCLUDE_PATH})
+set(CMAKE_POLICY_DEFAULT_CMP0177 NEW)
+FetchContent_Declare(
+    cpprealm
+    GIT_REPOSITORY https://github.com/realm/realm-cpp.git
+    GIT_TAG local-only
+    PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patch_cpprealm.cmake
+)
+FetchContent_MakeAvailable(cpprealm)
 
-# Add the library directories for linking
-link_directories(${BASE_LIB_PATH} ${BUILD_LIB_PATH})
+add_custom_target(copy_web_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/www/static"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/src/www" "${CMAKE_BINARY_DIR}/www"
+    COMMENT "Copying web assets"
+)
 
-# Project-specific CMakeLists.txt
-add_executable(${PROJECT_NAME} "./src/main.cpp")
+add_executable(${PROJECT_NAME} src/main.cpp)
+add_dependencies(${PROJECT_NAME} copy_web_assets)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    Crow::Crow
+    ZLIB::ZLIB
+    cpprealm
+    nlohmann_json::nlohmann_json
+)
+
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${cpprealm_SOURCE_DIR}/include
+)
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    CROW_STATIC_DIRECTORY="www/static/"
+    COLLECTION_MANAGER_VERSION="0.1.0"
+    COLLECTION_MANAGER_VERSION_SIGNED="10"
+    COLLECTION_MANAGER_HOST="127.0.0.1"
+    COLLECTION_MANAGER_PORT=11727
+)

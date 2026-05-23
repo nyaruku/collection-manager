@@ -1,0 +1,30 @@
+:root {
+    --bs-body-font-size: .8rem;
+}
+
+.navbar-dropdown {
+    min-width: 160px;
+}
+
+.about-dialog {
+    z-index: 1060;
+    width: 340px;
+    user-select: none;
+}
+
+.about-titlebar {
+    height: 26px;
+    cursor: move;
+}
+
+.source-pane-sidebar {
+    width: 220px;
+    min-width: 100px;
+}
+
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+

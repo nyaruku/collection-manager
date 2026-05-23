@@ -1,0 +1,31 @@
+{{{navbar}}}
+
+<!-- Source tabs -->
+<ul id="srcTabs" class="nav nav-tabs border-bottom-0 pt-1 bg-dark-subtle" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button id="tab-stable" type="button" class="rounded-0 nav-link py-0 px-3 active bg-dark-subtle" data-bs-toggle="tab" data-bs-target="#stable-pane">
+            {{tab_stable}}
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button id="tab-lazer" type="button" class="rounded-0 nav-link py-0 px-3 bg-dark-subtle" data-bs-toggle="tab" data-bs-target="#lazer-pane">
+            {{tab_lazer}}
+        </button>
+    </li>
+</ul>
+
+<!-- Main area -->
+<div class="flex-grow-1 overflow-hidden">
+    <div class="tab-content h-100">
+        {{{stable_pane}}}
+        {{{lazer_pane}}}
+    </div>
+</div>
+
+<!-- Status bar -->
+<div class="border-top bg-black flex-shrink-0 d-flex align-items-center px-2">
+    <span id="status-text">{{status_ready}}</span>
+    <span id="status-counts" class="ms-auto"></span>
+</div>
+
+{{{about_dialog}}}

@@ -1,0 +1,14 @@
+<div id="about-dialog" class="border bg-body shadow position-fixed d-none about-dialog">
+    <div id="about-titlebar" class="bg-body-secondary border-bottom d-flex align-items-center px-2 about-titlebar">
+        <span class="fw-semibold">{{about_dialog_title}}</span>
+        <button type="button" class="btn-close ms-auto p-0"
+                onclick="document.getElementById('about-dialog').classList.add('d-none')"></button>
+    </div>
+    <div class="p-3">
+        <p class="mb-1 fw-semibold">{{app_name}}</p>
+        <p class="mb-1">{{about_version}}</p>
+        <hr class="my-2">
+        <p class="mb-1">{{about_desc}}</p>
+        <p class="mb-0 small">{{about_formats}}</p>
+    </div>
+</div>

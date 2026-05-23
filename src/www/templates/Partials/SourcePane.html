@@ -1,0 +1,17 @@
+<div class="tab-pane fade {{active}} h-100" id="{{mode}}-pane" role="tabpanel">
+    <div class="d-flex h-100">
+        <div class="d-flex flex-column border-end flex-shrink-0 source-pane-sidebar">
+            <div class="px-2 border-bottom bg-dark-subtle">
+                <span class="text-uppercase">{{pane_collections_label}}</span>
+            </div>
+            <div class="overflow-y-auto flex-grow-1">
+                <div class="list-group list-group-flush" id="{{mode}}-list">
+                    <div class="list-group-item text-muted py-1 border-0">{{pane_loading}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="flex-grow-1 overflow-y-auto" id="{{mode}}-detail">
+            <p class="text-muted p-2 m-0">{{pane_select_prompt}}</p>
+        </div>
+    </div>
+</div>
