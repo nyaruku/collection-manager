@@ -1,2 +1,2 @@
-# cmake-template-project
-An empty cmake project that is ready to get cloned to start a new project
+# collection-manager
+A collection-manager for Linux only, which allows managing Stable and Lazer collections at the same time.
