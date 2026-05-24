@@ -6,9 +6,9 @@ $dark-bg-subtle-dark: #13151c;
 $border-color-dark: #252830;
 
 $cm-bg-card: #13151c;
-$cm-bg-hover: #1a1d25;
-$cm-border: #252830;
+$cm-bg-hover: #3a3d45;
 $cm-radius-row: 6px;
+$cm-border: $cm-bg-hover;
 
 @import "bootstrap-5.3.8/scss/bootstrap";
 
