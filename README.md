@@ -24,7 +24,7 @@ If you forgot `--recurse-submodules`:
 git submodule update --init --recursive
 ```
 
-Use `x86-release-linux` instead for a release build.
+Use `x86-release-linux` for release build.
 
 ## Running
 
