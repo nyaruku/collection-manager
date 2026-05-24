@@ -1,0 +1,22 @@
+pkgbase = collection-manager-bin
+	pkgdesc = osu! Collection Manager, supports Stable and Lazer
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/nyaruku/collection-manager
+	arch = x86_64
+	license = custom
+	depends = glibc
+	depends = gcc-libs
+	depends = zlib
+	depends = libuv
+	depends = brotli
+	depends = zstd
+	depends = openssl
+	provides = collection-manager
+	conflicts = collection-manager
+	conflicts = collection-manager-git
+	options = !debug
+	source = collection-manager-1.0.0-linux-x86_64.tar.zst::https://github.com/nyaruku/collection-manager/releases/download/v1.0.0/collection-manager-1.0.0-linux-x86_64.tar.zst
+	sha256sums = 63d02d77abf98f1793cde3b4a8007933e3aec0a4601fc066e3ddb57dbd355997
+
+pkgname = collection-manager-bin

@@ -1,0 +1,43 @@
+# Maintainer: Railgun
+
+pkgname=collection-manager-bin
+_pkgname=collection-manager
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='osu! Collection Manager, supports Stable and Lazer'
+arch=('x86_64')
+url='https://github.com/nyaruku/collection-manager'
+license=('custom')
+depends=(
+  'glibc'
+  'gcc-libs'
+  'zlib'
+  'libuv'
+  'brotli'
+  'zstd'
+  'openssl'
+)
+provides=('collection-manager')
+conflicts=('collection-manager' 'collection-manager-git')
+options=('!debug')
+_archive="$_pkgname-$pkgver-linux-x86_64"
+source=("$_archive.tar.zst::$url/releases/download/v$pkgver/$_archive.tar.zst")
+sha256sums=('63d02d77abf98f1793cde3b4a8007933e3aec0a4601fc066e3ddb57dbd355997')
+
+package() {
+  cd "$srcdir/$_archive"
+
+  install -Dm755 'collection-manager' "$pkgdir/usr/lib/collection-manager/collection-manager"
+
+  install -dm755 "$pkgdir/usr/lib/collection-manager"
+  cp -r 'www' "$pkgdir/usr/lib/collection-manager/www"
+
+  install -Dm755 /dev/stdin "$pkgdir/usr/bin/collection-manager" <<'EOF'
+#!/bin/sh
+cd /usr/lib/collection-manager || exit 1
+exec /usr/lib/collection-manager/collection-manager "$@"
+EOF
+
+  install -Dm644 'README.md' "$pkgdir/usr/share/doc/collection-manager/README.md"
+}
+
