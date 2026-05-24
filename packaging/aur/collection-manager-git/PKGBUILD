@@ -1,9 +1,9 @@
-# Maintainer: railgun_osu
+# Maintainer: Railgun
 
 pkgname=collection-manager-git
 _pkgname=collection-manager
 pkgver=1.0.0
-pkgrel=1
+pkgrel=4
 pkgdesc='osu! Collection Manager, supports Stable and Lazer'
 arch=('x86_64')
 url='https://github.com/nyaruku/collection-manager'
@@ -21,6 +21,7 @@ makedepends=(
   'cmake'
   'ninja'
   'gcc'
+  'sassc'
 )
 provides=('collection-manager')
 conflicts=('collection-manager')
@@ -31,10 +32,8 @@ source=(
   'libsass::git+https://github.com/sass/libsass.git#tag=3.6.6'
   'cpprealm::git+https://github.com/nyaruku/cpprealm.git#branch=patched'
   'cpprealm-realm-core::git+https://github.com/realm/realm-core.git#commit=60867846a0aca0c7da5e482282b293236f730216'
-  'cpprealm-Catch2::git+https://github.com/catchorg/Catch2.git#commit=728de353be6a6d3658932bfc8e1ea5c7742a61c6'
 )
 sha256sums=(
-  'SKIP'
   'SKIP'
   'SKIP'
   'SKIP'
@@ -60,16 +59,20 @@ prepare() {
 
   rm -rf "$srcdir/cpprealm/realm-core" "$srcdir/cpprealm/Catch2"
   ln -s "$srcdir/cpprealm-realm-core" "$srcdir/cpprealm/realm-core"
-  ln -s "$srcdir/cpprealm-Catch2" "$srcdir/cpprealm/Catch2"
 }
 
 build() {
   cd "$srcdir/$_pkgname"
 
+  rm -rf build
+
   cmake -S . -B build \
     -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DREALM_DISABLE_ALIGNED_STORAGE=ON \
+    -DREALM_CPP_NO_TESTS=ON \
+    -DBUILD_TESTING=OFF
 
   cmake --build build
 }
@@ -79,12 +82,15 @@ package() {
 
   install -Dm755 'build/collection-manager' "$pkgdir/usr/lib/collection-manager/collection-manager"
 
-  install -dm755 "$pkgdir/usr/share/collection-manager"
-  cp -r 'build/www' "$pkgdir/usr/share/collection-manager/www"
+  install -dm755 "$pkgdir/usr/lib/collection-manager"
+  cp -r 'build/www' "$pkgdir/usr/lib/collection-manager/www"
+  sassc -t compressed \
+    "$pkgdir/usr/lib/collection-manager/www/static/index.scss" \
+    "$pkgdir/usr/lib/collection-manager/www/static/index.css"
 
   install -Dm755 /dev/stdin "$pkgdir/usr/bin/collection-manager" <<'EOF'
 #!/bin/sh
-cd /usr/share/collection-manager || exit 1
+cd /usr/lib/collection-manager || exit 1
 exec /usr/lib/collection-manager/collection-manager "$@"
 EOF
 

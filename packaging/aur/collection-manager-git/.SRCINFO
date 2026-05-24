@@ -1,7 +1,7 @@
 pkgbase = collection-manager-git
 	pkgdesc = osu! Collection Manager, supports Stable and Lazer
 	pkgver = 1.0.0
-	pkgrel = 1
+	pkgrel = 4
 	url = https://github.com/nyaruku/collection-manager
 	arch = x86_64
 	license = custom
@@ -9,6 +9,7 @@ pkgbase = collection-manager-git
 	makedepends = cmake
 	makedepends = ninja
 	makedepends = gcc
+	makedepends = sassc
 	depends = glibc
 	depends = gcc-libs
 	depends = zlib
@@ -23,8 +24,6 @@ pkgbase = collection-manager-git
 	source = libsass::git+https://github.com/sass/libsass.git#tag=3.6.6
 	source = cpprealm::git+https://github.com/nyaruku/cpprealm.git#branch=patched
 	source = cpprealm-realm-core::git+https://github.com/realm/realm-core.git#commit=60867846a0aca0c7da5e482282b293236f730216
-	source = cpprealm-Catch2::git+https://github.com/catchorg/Catch2.git#commit=728de353be6a6d3658932bfc8e1ea5c7742a61c6
-	sha256sums = SKIP
 	sha256sums = SKIP
 	sha256sums = SKIP
 	sha256sums = SKIP
