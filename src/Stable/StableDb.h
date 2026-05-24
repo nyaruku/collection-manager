@@ -386,7 +386,6 @@ namespace stable {
                 } else {
                     models::Beatmap missing;
                     missing.md5 = hash;
-                    missing.title = "Unknown";
                     collection.beatmaps.push_back(std::move(missing));
                 }
             }
