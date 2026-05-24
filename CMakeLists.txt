@@ -32,13 +32,7 @@ set_target_properties(sass PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED ON)
 find_package(ZLIB REQUIRED)
 
 set(CMAKE_POLICY_DEFAULT_CMP0177 NEW)
-FetchContent_Declare(
-    cpprealm
-    GIT_REPOSITORY https://github.com/realm/realm-cpp.git
-    GIT_TAG local-only
-    PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patch_cpprealm.cmake
-)
-FetchContent_MakeAvailable(cpprealm)
+fetch(cpprealm https://github.com/nyaruku/cpprealm.git patched)
 
 add_custom_target(copy_web_assets ALL
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/www/static"

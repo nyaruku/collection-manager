@@ -7,3 +7,7 @@
 [submodule "third_party/libsass"]
 	path = third_party/libsass
 	url = https://github.com/sass/libsass.git
+[submodule "third_party/cpprealm"]
+	path = third_party/cpprealm
+	url = https://github.com/nyaruku/cpprealm.git
+	branch = patched
