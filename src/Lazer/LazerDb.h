@@ -105,7 +105,6 @@ namespace lazer {
                 } else {
                     models::Beatmap missing;
                     missing.md5 = *hash;
-                    missing.title = "(not downloaded)";
                     collection.beatmaps.push_back(std::move(missing));
                 }
             }
