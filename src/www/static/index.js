@@ -155,6 +155,21 @@ async function reloadAll() {
     setStatus('Ready');
 }
 
+async function recompileScss() {
+    setStatus('Recompiling SCSS...');
+    try {
+        const response = await fetch('/api/recompile-scss', { method: 'POST' });
+        const data = await response.json();
+        if (data.status === 'ok') {
+            setStatus('SCSS recompiled, reload the page to apply changes.');
+        } else {
+            setStatus('SCSS error: ' + (data.message || 'unknown error'));
+        }
+    } catch (error) {
+        setStatus('SCSS error: ' + error.message);
+    }
+}
+
 function sortList(listId, columnIndex) {
     const list = document.getElementById(listId);
     if (!list) return;
@@ -340,14 +355,15 @@ async function selectCollection(mode, element) {
     loading.className = 'text-muted p-2 m-0';
     loading.textContent = 'Loading...';
     detailPanel.replaceChildren(loading);
-    setStatus('Loading "' + name + '"...');
+    document.getElementById('status-text').innerHTML = 'Loading "' + escapeHtmlKeepLeadingSpaces(name) + '"...';
 
     try {
         const response = await fetch('/api/' + mode + '/collections?name=' + encodeURIComponent(name));
         if (!response.ok) throw new Error(await response.text());
         const collection = await response.json();
         detailPanel.replaceChildren(renderBeatmaps(collection));
-        setStatus('"' + name + '" - ' + (collection.beatmaps ? collection.beatmaps.length : 0) + ' beatmaps');
+        document.getElementById('status-text').innerHTML =
+            '"' + escapeHtmlKeepLeadingSpaces(name) + '" (' + (collection.beatmaps ? collection.beatmaps.length : 0) + ' beatmaps)';
     } catch (error) {
         const div = document.createElement('div');
         div.className = 'alert alert-danger m-2 py-1 rounded-0';

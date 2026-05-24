@@ -28,6 +28,11 @@ namespace Language {
         t.aboutDesc = "Durchsuche und verwalte Collections aus Stable und Lazer.";
         t.aboutFormats = "Unterstützt collection.db (Stable) und client.realm (Lazer).";
 
+        t.githubLinkText = "GitHub Repository";
+        t.githubLink = "https://github.com/nyaruku/collection-manager";
+
+        t.menuFileRecompileScss = "SCSS re-kompilieren";
+
         t.paneCollectionsLabel = "Collections";
         t.paneLoading = "Wird geladen...";
         t.paneSelectPrompt = "Collection auswählen";

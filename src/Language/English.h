@@ -28,6 +28,11 @@ namespace Language {
         t.aboutDesc = "Browse and manage osu! collections from both stable and lazer.";
         t.aboutFormats = "Supports collection.db (stable) and client.realm (lazer).";
 
+        t.githubLinkText = "GitHub Repository";
+        t.githubLink = "https://github.com/nyaruku/collection-manager";
+
+        t.menuFileRecompileScss = "Recompile SCSS";
+
         t.paneCollectionsLabel = "Collections";
         t.paneLoading = "Loading...";
         t.paneSelectPrompt = "Select a collection";

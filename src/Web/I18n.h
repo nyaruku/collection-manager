@@ -22,6 +22,9 @@ namespace Web {
         ctx["about_version"] = translation.aboutVersion;
         ctx["about_desc"] = translation.aboutDesc;
         ctx["about_formats"] = translation.aboutFormats;
+        ctx["github_link_text"] = translation.githubLinkText;
+        ctx["github_link"] = translation.githubLink;
+        ctx["menu_file_recompile_scss"] = translation.menuFileRecompileScss;
         ctx["pane_collections_label"] = translation.paneCollectionsLabel;
         ctx["pane_loading"] = translation.paneLoading;
         ctx["pane_select_prompt"] = translation.paneSelectPrompt;

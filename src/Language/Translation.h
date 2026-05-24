@@ -27,6 +27,11 @@ namespace Language {
         std::string aboutDesc;
         std::string aboutFormats;
 
+        std::string githubLinkText;
+        std::string githubLink;
+
+        std::string menuFileRecompileScss;
+
         std::string paneCollectionsLabel;
         std::string paneLoading;
         std::string paneSelectPrompt;
