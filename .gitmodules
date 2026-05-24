@@ -1,0 +1,9 @@
+[submodule "third_party/Crow"]
+	path = third_party/Crow
+	url = https://github.com/CrowCpp/Crow.git
+[submodule "third_party/nlohmann_json"]
+	path = third_party/nlohmann_json
+	url = https://github.com/nlohmann/json.git
+[submodule "third_party/libsass"]
+	path = third_party/libsass
+	url = https://github.com/sass/libsass.git
