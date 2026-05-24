@@ -5,6 +5,50 @@ const hiddenColumns = new Set();
 const collectionCounts = {};
 let detailSequence = 0;
 
+const viewSessionKeys = {
+    hideUnknownMaps: 'collection-manager.hideUnknownMaps',
+    hiddenColumns: 'collection-manager.hiddenColumns',
+};
+
+const i18n = window.CM_I18N || {};
+
+function tr(key, values = {}) {
+    return (i18n[key] || key).replace(/\{(\w+)}/g, (_, name) =>
+        Object.prototype.hasOwnProperty.call(values, name) ? values[name] : '{' + name + '}');
+}
+
+function restoreViewSession() {
+    try {
+        hideUnknownMaps = sessionStorage.getItem(viewSessionKeys.hideUnknownMaps) === '1';
+
+        hiddenColumns.clear();
+        const hideableColumns = new Set(columnDefs.filter(def => def.hideable).map(def => def.col));
+        const savedColumns = JSON.parse(sessionStorage.getItem(viewSessionKeys.hiddenColumns) || '[]');
+        if (Array.isArray(savedColumns)) {
+            savedColumns.forEach(col => {
+                if (hideableColumns.has(col)) hiddenColumns.add(col);
+            });
+        }
+    } catch {
+        hideUnknownMaps = false;
+        hiddenColumns.clear();
+    }
+}
+
+function saveViewSession() {
+    try {
+        sessionStorage.setItem(viewSessionKeys.hideUnknownMaps, hideUnknownMaps ? '1' : '0');
+        sessionStorage.setItem(viewSessionKeys.hiddenColumns, JSON.stringify([...hiddenColumns]));
+    } catch {
+        // Ignore disabled/unavailable session storage.
+    }
+}
+
+function updateHideUnknownLabel() {
+    const item = document.getElementById('hide-unknown-item');
+    if (item) item.textContent = tr(hideUnknownMaps ? 'menuViewShowUnknown' : 'menuViewHideUnknown');
+}
+
 // unknown-map visibility
 const dynamicStyle = document.createElement('style');
 document.head.appendChild(dynamicStyle);
@@ -18,40 +62,212 @@ function updateDynamicStyles() {
 
 function setColumnVisible(col, visible) {
     if (!visible) hiddenColumns.add(col); else hiddenColumns.delete(col);
+    saveViewSession();
     updateDynamicStyles();
 }
 
 function toggleHideUnknown() {
     hideUnknownMaps = !hideUnknownMaps;
-    document.getElementById('hide-unknown-item').textContent =
-        hideUnknownMaps ? 'Show Unknown Maps' : 'Hide Unknown Maps';
+    updateHideUnknownLabel();
+    saveViewSession();
     updateDynamicStyles();
-}
-
-// Chunked renderer
-const scheduleIdle = typeof requestIdleCallback !== 'undefined'
-    ? fn => requestIdleCallback(fn, { timeout: 150 })
-    : fn => setTimeout(fn, 0);
-
-const RENDER_CHUNK = 150;
-const listRenderGen = {};
-
-function renderChunk(list, listId, items, start, gen) {
-    if (listRenderGen[listId] !== gen) return;
-    const end = Math.min(start + RENDER_CHUNK, items.length);
-    const frag = document.createDocumentFragment();
-    for (let i = start; i < end; i++) frag.appendChild(buildBeatmapRow(items[i]));
-    list.appendChild(frag);
-    if (end < items.length) scheduleIdle(() => renderChunk(list, listId, items, end, gen));
-}
-
-function startRender(list, listId) {
-    const gen = (listRenderGen[listId] = (listRenderGen[listId] || 0) + 1);
-    list.querySelectorAll('.beatmap-row').forEach(r => r.remove());
-    renderChunk(list, listId, listData[listId].sorted, 0, gen);
+    rerenderVirtualLists();
 }
 
 const listData = {};
+const beatmapSelections = {};
+const beatmapSelectionAnchors = {};
+let beatmapClipboard = null;
+
+// Virtual renderer: keep all maps in JS, only render visible rows.
+const VIRTUAL_OVERSCAN = 20;
+const DEFAULT_ROW_STEP = 32;
+
+function visibleBeatmaps(state) {
+    return state.visible || state.sorted;
+}
+
+function refreshVisibleBeatmaps(state) {
+    state.visible = hideUnknownMaps ? state.sorted.filter(beatmap => !!beatmap.title) : state.sorted;
+}
+
+function measureRowStep(state) {
+    const row = state.rowsWindow.querySelector('.beatmap-row');
+    if (!row) return state.rowStep || DEFAULT_ROW_STEP;
+
+    const rowStyle = getComputedStyle(row);
+    const height = row.getBoundingClientRect().height;
+    const marginBottom = parseFloat(rowStyle.marginBottom) || 0;
+    return Math.max(1, height + marginBottom);
+}
+
+function renderVirtualList(listId) {
+    const state = listData[listId];
+    if (!state || !state.list.isConnected || !state.scrollEl) return;
+
+    const scrollEl = state.scrollEl;
+    const items = visibleBeatmaps(state);
+    state.rowStep = measureRowStep(state);
+
+    state.body.style.height = (items.length * state.rowStep) + 'px';
+
+    const scrollRect = scrollEl.getBoundingClientRect();
+    const bodyRect = state.body.getBoundingClientRect();
+    const firstVisible = Math.min(
+        items.length,
+        Math.floor(Math.max(0, scrollRect.top - bodyRect.top) / state.rowStep)
+    );
+    const visibleCount = Math.ceil(scrollEl.clientHeight / state.rowStep);
+    const start = Math.max(0, firstVisible - VIRTUAL_OVERSCAN);
+    const end = Math.min(items.length, firstVisible + visibleCount + VIRTUAL_OVERSCAN);
+
+    state.rowsWindow.style.transform = 'translateY(' + (start * state.rowStep) + 'px)';
+
+    const frag = document.createDocumentFragment();
+    for (let i = start; i < end; i++) {
+        frag.appendChild(buildBeatmapRow(items[i], state.mode, state.collectionName));
+    }
+    state.rowsWindow.replaceChildren(frag);
+    state.renderedStart = start;
+    state.renderedEnd = end;
+
+    const measured = measureRowStep(state);
+    if (Math.abs(measured - state.rowStep) > 0.5) {
+        state.rowStep = measured;
+        state.body.style.height = (items.length * state.rowStep) + 'px';
+        state.rowsWindow.style.transform = 'translateY(' + (start * state.rowStep) + 'px)';
+    }
+}
+
+function scheduleVirtualRender(listId) {
+    const state = listData[listId];
+    if (!state || state.renderScheduled) return;
+    state.renderScheduled = true;
+    requestAnimationFrame(() => {
+        state.renderScheduled = false;
+        renderVirtualList(listId);
+    });
+}
+
+function rerenderVirtualLists() {
+    Object.keys(listData).forEach(listId => {
+        const state = listData[listId];
+        refreshVisibleBeatmaps(state);
+        if (state.list?.isConnected) scheduleVirtualRender(listId);
+    });
+}
+
+function startRender(list, listId) {
+    const state = listData[listId];
+    refreshVisibleBeatmaps(state);
+    state.rowsWindow.replaceChildren();
+    renderVirtualList(listId);
+}
+
+window.addEventListener('resize', rerenderVirtualLists);
+
+function selectionKey(mode, collectionName) {
+    return mode + '\u0000' + collectionName;
+}
+
+function selectionFor(mode, collectionName) {
+    const key = selectionKey(mode, collectionName);
+    if (!beatmapSelections[key]) beatmapSelections[key] = new Set();
+    return beatmapSelections[key];
+}
+
+function syncBeatmapSelection(list, mode, collectionName) {
+    const selected = selectionFor(mode, collectionName);
+    list.querySelectorAll('.beatmap-row').forEach(row => {
+        row.classList.toggle('beatmap-row-selected', selected.has(row.dataset.md5));
+    });
+}
+
+function selectedHashesFor(mode, collectionName, fallbackMd5) {
+    const selected = selectionFor(mode, collectionName);
+    return selected.has(fallbackMd5) ? [...selected] : [fallbackMd5];
+}
+
+function selectBeatmapRow(row, mode, collectionName, md5, additive) {
+    const key = selectionKey(mode, collectionName);
+    const selected = selectionFor(mode, collectionName);
+
+    if (!additive) {
+        selected.clear();
+        row.closest('.beatmap-list')
+            ?.querySelectorAll('.beatmap-row-selected')
+            .forEach(el => el.classList.remove('beatmap-row-selected'));
+    }
+
+    if (additive && selected.has(md5)) {
+        selected.delete(md5);
+        row.classList.remove('beatmap-row-selected');
+    } else {
+        selected.add(md5);
+        row.classList.add('beatmap-row-selected');
+    }
+
+    beatmapSelectionAnchors[key] = md5;
+}
+
+function selectBeatmapRange(row, mode, collectionName, md5, additive) {
+    const list = row.closest('.beatmap-list');
+    const state = listData[list?.id];
+    const key = selectionKey(mode, collectionName);
+    const anchor = beatmapSelectionAnchors[key];
+
+    if (!list || !state || !anchor) {
+        selectBeatmapRow(row, mode, collectionName, md5, additive);
+        return;
+    }
+
+    const hashes = visibleBeatmaps(state).map(beatmap => beatmap.md5);
+    const from = hashes.indexOf(anchor);
+    const to = hashes.indexOf(md5);
+    if (from < 0 || to < 0) {
+        selectBeatmapRow(row, mode, collectionName, md5, additive);
+        return;
+    }
+
+    const selected = selectionFor(mode, collectionName);
+    if (!additive) selected.clear();
+
+    const start = Math.min(from, to);
+    const end = Math.max(from, to);
+    for (let i = start; i <= end; i++) selected.add(hashes[i]);
+
+    beatmapSelectionAnchors[key] = md5;
+    syncBeatmapSelection(list, mode, collectionName);
+}
+
+function copyBeatmaps(mode, collectionName, hashes) {
+    beatmapClipboard = {
+        mode,
+        collectionName,
+        hashes: [...new Set(hashes)],
+    };
+    setStatus(tr('copiedBeatmapsFrom', { count: beatmapClipboard.hashes.length, name: collectionName }));
+}
+
+async function pasteBeatmaps(mode, targetCollection) {
+    if (!beatmapClipboard || beatmapClipboard.hashes.length === 0) {
+        setStatus(tr('clipboardEmpty'));
+        return;
+    }
+
+    try {
+        const result = await apiFetch('/api/collections/copy', {
+            from: beatmapClipboard.mode,
+            to: mode,
+            collection: beatmapClipboard.collectionName,
+            targetCollection,
+            hashes: beatmapClipboard.hashes,
+        });
+        await loadCollections(mode);
+        await selectCollectionByName(mode, targetCollection);
+        setStatus(tr('pastedBeatmapsInto', { count: result.copied, name: targetCollection }));
+    } catch (e) { setStatus(tr('pasteError', { error: e.message })); }
+}
 
 function setStatus(text) {
     document.getElementById('status-text').textContent = text;
@@ -60,7 +276,7 @@ function setStatus(text) {
 function updateStatusCounts() {
     document.getElementById('status-counts').textContent =
         Object.entries(collectionCounts)
-            .map(([mode, count]) => mode + ': ' + count + ' collections')
+            .map(([mode, count]) => tr('collectionCount', { mode, count }))
             .join('  ');
 }
 
@@ -120,15 +336,19 @@ function switchTab(mode) {
 
 // Column definitions
 const columnDefs = [
-    { name: 'Title', col: 'title', hideable: false },
-    { name: 'Artist', col: 'artist', hideable: true },
-    { name: 'Difficulty', col: 'difficulty', hideable: true },
-    { name: 'Mapper', col: 'mapper', hideable: true },
-    { name: 'Stars', col: 'stars', hideable: true },
-    { name: 'ID', col: 'id', hideable: true },
-    { name: 'Set', col: 'setid', hideable: true },
-    { name: 'MD5', col: 'md5', hideable: true, extraClass: 'col-md5' },
+    { name: tr('columnTitle'), col: 'title', hideable: false },
+    { name: tr('columnArtist'), col: 'artist', hideable: true },
+    { name: tr('columnDifficulty'), col: 'difficulty', hideable: true },
+    { name: tr('columnMapper'), col: 'mapper', hideable: true },
+    { name: tr('columnStars'), col: 'stars', hideable: true },
+    { name: tr('columnId'), col: 'id', hideable: true },
+    { name: tr('columnSet'), col: 'setid', hideable: true },
+    { name: tr('columnMd5'), col: 'md5', hideable: true, extraClass: 'col-md5' },
 ];
+
+restoreViewSession();
+updateHideUnknownLabel();
+updateDynamicStyles();
 
 // Column context menu
 function showColumnMenu(event) {
@@ -166,24 +386,24 @@ document.addEventListener('click', () => {
 
 // API actions
 async function reloadAll() {
-    setStatus('Reloading...');
+    setStatus(tr('statusReloading'));
     await fetch('/api/reload', { method: 'POST' });
     await Promise.all([loadCollections('stable'), loadCollections('lazer')]);
-    setStatus('Ready');
+    setStatus(tr('statusReady'));
 }
 
 async function recompileScss() {
-    setStatus('Recompiling SCSS...');
+    setStatus(tr('statusRecompilingScss'));
     try {
         const response = await fetch('/api/recompile-scss', { method: 'POST' });
         const data = await response.json();
         if (data.status === 'ok') {
-            setStatus('SCSS recompiled, reload the page to apply changes.');
+            setStatus(tr('statusScssRecompiled'));
         } else {
-            setStatus('SCSS error: ' + (data.message || 'unknown error'));
+            setStatus(tr('statusScssError', { error: data.message || tr('unknownError') }));
         }
     } catch (error) {
-        setStatus('SCSS error: ' + error.message);
+        setStatus(tr('statusScssError', { error: error.message }));
     }
 }
 
@@ -217,17 +437,30 @@ function sortList(listId, columnIndex) {
         : [...state.all].sort((a, b) => dir * (isNumeric
             ? a._k[col] - b._k[col]
             : a._k[col].localeCompare(b._k[col])));
+    refreshVisibleBeatmaps(state);
 
     startRender(list, listId);
 }
 
-function buildBeatmapRow(beatmap) {
+function buildBeatmapRow(beatmap, mode, collectionName) {
     const notDownloaded = !beatmap.title;
     const row = cloneTemplate('tmpl-beatmap-row');
+    row.dataset.md5 = beatmap.md5 || '';
     if (notDownloaded) {
         row.classList.add('text-muted', 'fst-italic');
         row.dataset.unknown = '1';
     }
+    if (selectionFor(mode, collectionName).has(beatmap.md5)) {
+        row.classList.add('beatmap-row-selected');
+    }
+    row.addEventListener('click', event => {
+        if (event.target.closest('a')) return;
+        event.preventDefault();
+        const additive = event.ctrlKey || event.metaKey;
+        if (event.shiftKey) selectBeatmapRange(row, mode, collectionName, beatmap.md5, additive);
+        else selectBeatmapRow(row, mode, collectionName, beatmap.md5, additive);
+    });
+    row.addEventListener('contextmenu', e => showBeatmapMenu(e, mode, collectionName, beatmap.md5));
 
     const cells = {};
     row.querySelectorAll('[data-col]').forEach(el => { cells[el.dataset.col] = el; });
@@ -238,7 +471,7 @@ function buildBeatmapRow(beatmap) {
         if (def.extraClass) cell.classList.add(def.extraClass);
 
         switch (def.col) {
-            case 'title': cell.textContent = notDownloaded ? 'not downloaded' : beatmap.title; break;
+            case 'title': cell.textContent = notDownloaded ? tr('unknownBeatmapTitle') : beatmap.title; break;
             case 'artist': cell.textContent = beatmap.artist || ''; break;
             case 'difficulty': cell.textContent = beatmap.difficulty || ''; break;
             case 'mapper': cell.textContent = beatmap.mapper || ''; break;
@@ -265,7 +498,7 @@ function buildBeatmapRow(beatmap) {
     return row;
 }
 
-function buildBeatmapList(collection, listId) {
+function buildBeatmapList(collection, listId, mode) {
     // Pre-compute lowercase sort keys so sort never touches the DOM
     const prepared = collection.beatmaps.map(b => ({
         ...b,
@@ -280,8 +513,6 @@ function buildBeatmapList(collection, listId) {
             md5: (b.md5 || '').toLowerCase(),
         }
     }));
-    listData[listId] = { all: prepared, sorted: prepared, sortCol: -1, sortDir: 0 };
-
     const list = cloneTemplate('tmpl-beatmap-list');
     list.id = listId;
 
@@ -296,18 +527,48 @@ function buildBeatmapList(collection, listId) {
     });
     list.appendChild(header);
 
-    // First RENDER_CHUNK rows rendered synchronously
-    startRender(list, listId);
+    const body = document.createElement('div');
+    body.className = 'beatmap-virtual-body';
+    const rowsWindow = document.createElement('div');
+    rowsWindow.className = 'beatmap-virtual-window';
+    body.appendChild(rowsWindow);
+
+    list.appendChild(body);
+
+    listData[listId] = {
+        all: prepared,
+        sorted: prepared,
+        visible: prepared,
+        sortCol: -1,
+        sortDir: 0,
+        mode,
+        collectionName: collection.name,
+        list,
+        scrollEl: null,
+        header,
+        body,
+        rowsWindow,
+        rowStep: DEFAULT_ROW_STEP,
+        renderScheduled: false,
+    };
+
+    requestAnimationFrame(() => {
+        const state = listData[listId];
+        if (!state || !list.isConnected) return;
+        state.scrollEl = list.parentElement;
+        state.scrollEl.addEventListener('scroll', () => scheduleVirtualRender(listId), { passive: true });
+        startRender(list, listId);
+    });
 
     return list;
 }
 
-function renderBeatmaps(collection) {
+function renderBeatmaps(collection, mode) {
     const fragment = document.createDocumentFragment();
     if (!collection.beatmaps || collection.beatmaps.length === 0) {
         const p = document.createElement('p');
         p.className = 'text-muted p-2 m-0';
-        p.innerHTML = escapeHtmlKeepLeadingSpaces(collection.name) + ' - no beatmaps';
+        p.innerHTML = tr('noBeatmaps', { name: escapeHtmlKeepLeadingSpaces(collection.name) });
         fragment.appendChild(p);
         return fragment;
     }
@@ -315,9 +576,9 @@ function renderBeatmaps(collection) {
 
     const header = cloneTemplate('tmpl-collection-header');
     header.querySelector('[data-slot="name"]').innerHTML = escapeHtmlKeepLeadingSpaces(collection.name);
-    header.querySelector('[data-slot="count"]').textContent = collection.beatmaps.length + ' Maps';
+    header.querySelector('[data-slot="count"]').textContent = tr('mapCount', { count: collection.beatmaps.length });
     fragment.appendChild(header);
-    fragment.appendChild(buildBeatmapList(collection, listId));
+    fragment.appendChild(buildBeatmapList(collection, listId, mode));
 
     return fragment;
 }
@@ -336,7 +597,7 @@ async function loadCollections(mode) {
         if (collections.length === 0) {
             const div = document.createElement('div');
             div.className = 'list-group-item text-muted py-1 border-0 fst-italic';
-            div.textContent = 'No collections';
+            div.textContent = tr('noCollections');
             listElement.replaceChildren(div);
             return;
         }
@@ -346,9 +607,10 @@ async function loadCollections(mode) {
             const item = cloneTemplate('tmpl-collection-item');
             item.dataset.name = collection.name || '';
             item.querySelector('[data-slot="name"]').innerHTML =
-                escapeHtmlKeepLeadingSpaces(collection.name) || '<em class="text-muted">(unnamed)</em>';
+                escapeHtmlKeepLeadingSpaces(collection.name) || '<em class="text-muted">' + tr('unnamedCollection') + '</em>';
             item.querySelector('[data-slot="count"]').textContent = collection.count;
             item.addEventListener('click', () => selectCollection(mode, item));
+            item.addEventListener('contextmenu', e => showCollectionMenu(e, mode, collection.name || ''));
             fragment.appendChild(item);
         });
         listElement.replaceChildren(fragment);
@@ -358,7 +620,7 @@ async function loadCollections(mode) {
         div.className = 'list-group-item text-danger py-1 border-0';
         div.textContent = error.message;
         listElement.replaceChildren(div);
-        setStatus('Error: ' + error.message);
+        setStatus(tr('genericError', { error: error.message }));
     }
 }
 
@@ -371,25 +633,214 @@ async function selectCollection(mode, element) {
     const detailPanel = document.getElementById(mode + '-detail');
     const loading = document.createElement('p');
     loading.className = 'text-muted p-2 m-0';
-    loading.textContent = 'Loading...';
+    loading.textContent = tr('paneLoading');
     detailPanel.replaceChildren(loading);
-    document.getElementById('status-text').innerHTML = 'Loading "' + escapeHtmlKeepLeadingSpaces(name) + '"...';
+    document.getElementById('status-text').innerHTML = tr('loadingCollection', { name: escapeHtmlKeepLeadingSpaces(name) });
 
     try {
         const response = await fetch('/api/' + mode + '/collections?name=' + encodeURIComponent(name));
         if (!response.ok) throw new Error(await response.text());
         const collection = await response.json();
-        detailPanel.replaceChildren(renderBeatmaps(collection));
+        detailPanel.replaceChildren(renderBeatmaps(collection, mode));
         document.getElementById('status-text').innerHTML =
-            '"' + escapeHtmlKeepLeadingSpaces(name) + '" (' + (collection.beatmaps ? collection.beatmaps.length : 0) + ' beatmaps)';
+            tr('collectionStatus', { name: escapeHtmlKeepLeadingSpaces(name), count: collection.beatmaps ? collection.beatmaps.length : 0 });
     } catch (error) {
         const div = document.createElement('div');
         div.className = 'alert alert-danger m-2 py-1 rounded-0';
         div.textContent = error.message;
         detailPanel.replaceChildren(div);
-        setStatus('Error: ' + error.message);
+        setStatus(tr('genericError', { error: error.message }));
     }
 }
 
 loadCollections('stable');
 loadCollections('lazer');
+
+
+// Collection context menu
+function showCollectionMenu(event, mode, name) {
+    event.preventDefault();
+    event.stopPropagation();
+    const otherMode = mode === 'stable' ? 'lazer' : 'stable';
+    const menu = document.getElementById('coll-context-menu');
+    menu.innerHTML = '';
+
+    const items = [
+        { label: tr('menuRename'), action: () => renameCollection(mode, name) },
+        { label: tr('menuExportOsdb'), action: () => exportCollections(mode, [name]) },
+        { label: tr('menuCopyTo', { mode: otherMode }), action: () => copyCollectionTo(mode, otherMode, name) },
+        beatmapClipboard ? { label: tr('menuPasteBeatmaps', { count: beatmapClipboard.hashes.length }), action: () => pasteBeatmaps(mode, name) } : null,
+        'separator',
+        { label: tr('menuDelete'), action: () => deleteCollection(mode, name), danger: true },
+    ];
+
+    items.forEach(item => {
+        if (!item) return;
+        if (item === 'separator') { const hr = document.createElement('hr'); hr.className = 'dropdown-divider my-0'; menu.appendChild(hr); return; }
+        const el = document.createElement('div');
+        el.className = 'col-context-item' + (item.danger ? ' text-danger' : '');
+        el.textContent = item.label;
+        el.addEventListener('click', () => { menu.classList.add('d-none'); item.action(); });
+        menu.appendChild(el);
+    });
+
+    menu.style.left = Math.min(event.clientX, window.innerWidth - 180) + 'px';
+    menu.style.top  = Math.min(event.clientY, window.innerHeight - menu.scrollHeight - 8) + 'px';
+    menu.classList.remove('d-none');
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('coll-context-menu').classList.add('d-none');
+    document.getElementById('beatmap-context-menu').classList.add('d-none');
+});
+
+// Beatmap row context menu
+function showBeatmapMenu(event, mode, collectionName, md5) {
+    event.preventDefault();
+    event.stopPropagation();
+    const otherMode = mode === 'stable' ? 'lazer' : 'stable';
+    const hashes = selectedHashesFor(mode, collectionName, md5);
+    const menu = document.getElementById('beatmap-context-menu');
+    menu.innerHTML = '';
+
+    const items = [
+        { label: tr('menuCopyBeatmaps', { count: hashes.length }), action: () => copyBeatmaps(mode, collectionName, hashes) },
+        { label: tr('menuRemoveFromCollection'), action: async () => {
+            await apiFetch('/api/' + mode + '/collections/remove-beatmaps', { collection: collectionName, hashes });
+            await selectCollectionByName(mode, collectionName);
+        }, danger: true },
+        { label: tr('menuCopyTo', { mode: otherMode }), action: async () => {
+            const res = await apiFetch('/api/collections/copy', { from: mode, to: otherMode, collection: collectionName, hashes });
+            if (res.status === 'ok') setStatus(tr('copiedBeatmapsTo', { count: hashes.length, mode: otherMode }));
+        }},
+    ];
+
+    items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'col-context-item' + (item.danger ? ' text-danger' : '');
+        el.textContent = item.label;
+        el.addEventListener('click', () => { menu.classList.add('d-none'); item.action(); });
+        menu.appendChild(el);
+    });
+
+    menu.style.left = Math.min(event.clientX, window.innerWidth - 180) + 'px';
+    menu.style.top  = Math.min(event.clientY, window.innerHeight - menu.scrollHeight - 8) + 'px';
+    menu.classList.remove('d-none');
+}
+
+// API helpers
+async function apiFetch(url, body) {
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+// Collection CRUD
+async function createCollection(mode) {
+    const name = prompt(tr('promptCollectionName'));
+    if (!name) return;
+    try {
+        await apiFetch('/api/' + mode + '/collections/create', { name });
+        await loadCollections(mode);
+        setStatus(tr('statusCreatedCollection', { name }));
+    } catch (e) { setStatus(tr('genericError', { error: e.message })); }
+}
+
+async function deleteCollection(mode, name) {
+    if (!confirm(tr('confirmDeleteCollection', { name }))) return;
+    try {
+        await apiFetch('/api/' + mode + '/collections/delete', { name });
+        await loadCollections(mode);
+        document.getElementById(mode + '-detail').innerHTML = '';
+        setStatus(tr('statusDeletedCollection', { name }));
+    } catch (e) { setStatus(tr('genericError', { error: e.message })); }
+}
+
+async function renameCollection(mode, name) {
+    const newName = prompt(tr('promptNewName'), name);
+    if (!newName || newName === name) return;
+    try {
+        await apiFetch('/api/' + mode + '/collections/rename', { name, newName });
+        await loadCollections(mode);
+        setStatus(tr('statusRenamedCollection', { name: newName }));
+    } catch (e) { setStatus(tr('genericError', { error: e.message })); }
+}
+
+async function selectCollectionByName(mode, name) {
+    const item = [...document.querySelectorAll('#' + mode + '-list .list-group-item')]
+        .find(el => el.dataset.name === name);
+    if (item) await selectCollection(mode, item);
+}
+
+async function copyCollectionTo(fromMode, toMode, name) {
+    try {
+        const res = await apiFetch('/api/collections/copy', { from: fromMode, to: toMode, collection: name });
+        setStatus(tr('copiedBeatmapsTo', { count: res.copied, mode: toMode }));
+    } catch (e) { setStatus(tr('genericError', { error: e.message })); }
+}
+
+// Save
+async function saveCollections(mode) {
+    setStatus(tr('statusSaving', { mode }));
+    try {
+        await apiFetch('/api/' + mode + '/save', {});
+        setStatus(tr('statusSaved', { mode }));
+    } catch (e) { setStatus(tr('saveError', { error: e.message })); }
+}
+
+async function backupCollections(mode) {
+    setStatus(tr('statusBackingUp', { mode }));
+    try {
+        const result = await apiFetch('/api/' + mode + '/backup', {});
+        setStatus(tr('statusBackupCreated', { mode, path: result.path }));
+    } catch (e) { setStatus(tr('backupError', { error: e.message })); }
+}
+
+// Import osdb
+function importCollections(mode) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.osdb';
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+        setStatus(tr('statusImporting', { file: file.name }));
+        try {
+            const buffer = await file.arrayBuffer();
+            const res = await fetch('/api/' + mode + '/import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/octet-stream' },
+                body: buffer,
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            await loadCollections(mode);
+            setStatus(tr('statusImportedCollections', { count: data.imported, mode }));
+        } catch (e) { setStatus(tr('importError', { error: e.message })); }
+    };
+    input.click();
+}
+
+// Export osdb
+async function exportCollections(mode, names) {
+    try {
+        const res = await fetch('/api/' + mode + '/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ collections: names }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (names.length === 1 ? names[0] : 'collections') + '.osdb';
+        a.click();
+        URL.revokeObjectURL(url);
+    } catch (e) { setStatus(tr('exportError', { error: e.message })); }
+}
+
