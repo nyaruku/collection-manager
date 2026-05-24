@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <cstdint>
 #include <fstream>
 #include <sstream>
@@ -279,7 +280,7 @@ namespace stable {
         return output;
     }
 
-    inline std::vector<models::Collection> parseOsdb(const std::string& path) {
+    inline std::vector<models::Collection> parseOsdb(std::istream& file) {
         static const std::unordered_map<std::string, int> versionMap = {
             {"o!dm",    1}
            ,{"o!dm2",   2}
@@ -293,10 +294,6 @@ namespace stable {
            ,{"o!dm8min",1008}
         };
 
-        std::ifstream file(path, std::ios::binary);
-        if (!file) {
-            throw std::runtime_error("Cannot open: " + path);
-        }
 
         std::string versionStr = readDotnetString(file);
         if (auto found = versionMap.find(versionStr); found == versionMap.end()) {
@@ -337,31 +334,41 @@ namespace stable {
             collection.hashes.reserve(beatmapCount);
 
             for (int32_t j = 0; j < beatmapCount; ++j) {
+                const auto beatmapStart = stream->tellg();
                 models::Beatmap beatmap;
-                readI32(*stream); // mapId
-                if (fileVersion >= 2) {
-                    readI32(*stream); // mapSetId
-                }
+                try {
+                    beatmap.beatmapId = readI32(*stream);
+                    if (fileVersion >= 2) {
+                        beatmap.beatmapSetId = readI32(*stream);
+                    }
 
-                if (!minimal) {
-                    beatmap.artist = readDotnetString(*stream);
-                    beatmap.title = readDotnetString(*stream);
-                    beatmap.difficulty = readDotnetString(*stream);
-                }
+                    if (!minimal) {
+                        beatmap.artist = readDotnetString(*stream);
+                        beatmap.title = readDotnetString(*stream);
+                        beatmap.difficulty = readDotnetString(*stream);
+                    }
 
-                beatmap.md5 = readDotnetString(*stream);
-                if (fileVersion >= 4) {
-                    readDotnetString(*stream); // userComment
-                }
-                if (fileVersion >= 8 || (fileVersion >= 5 && !minimal)) {
-                    readU8(*stream); // playMode
-                }
-                if (fileVersion >= 8 || (fileVersion >= 6 && !minimal)) {
-                    beatmap.starRating = readF64(*stream);
-                }
+                    beatmap.md5 = readDotnetString(*stream);
+                    if (fileVersion >= 4) {
+                        readDotnetString(*stream); // userComment
+                    }
+                    if (fileVersion >= 8 || (fileVersion >= 5 && !minimal)) {
+                        readU8(*stream); // playMode
+                    }
+                    if (fileVersion >= 8 || (fileVersion >= 6 && !minimal)) {
+                        beatmap.starRating = readF64(*stream);
+                    }
 
-                collection.hashes.push_back(beatmap.md5);
-                collection.beatmaps.push_back(std::move(beatmap));
+                    collection.hashes.push_back(beatmap.md5);
+                    collection.beatmaps.push_back(std::move(beatmap));
+                } catch (const std::runtime_error& error) {
+                    if (std::string(error.what()) != "Unexpected end of file" || beatmapStart == std::streampos(-1)) {
+                        throw;
+                    }
+                    stream->clear();
+                    stream->seekg(beatmapStart);
+                    break;
+                }
             }
 
             if (fileVersion >= 3) {
@@ -374,6 +381,12 @@ namespace stable {
             collections.push_back(std::move(collection));
         }
         return collections;
+    }
+
+    inline std::vector<models::Collection> parseOsdb(const std::string& path) {
+        std::ifstream f(path, std::ios::binary);
+        if (!f) throw std::runtime_error("Cannot open: " + path);
+        return parseOsdb(f);
     }
 
     // Resolve osu!.db metadata into collections
@@ -392,3 +405,106 @@ namespace stable {
         }
     }
 }
+
+// Write support
+namespace stable {
+
+    template<typename T>
+    inline void writeVal(std::ostream& s, T v) {
+        s.write(reinterpret_cast<const char*>(&v), sizeof(T));
+    }
+
+    inline void writeUleb128(std::ostream& s, uint32_t v) {
+        do {
+            uint8_t byte = v & 0x7F;
+            v >>= 7;
+            if (v) byte |= 0x80;
+            s.put(byte);
+        } while (v);
+    }
+
+    inline void writeOsuString(std::ostream& s, const std::string& str) {
+        if (str.empty()) { s.put(0x00); return; }
+        s.put(0x0b);
+        writeUleb128(s, static_cast<uint32_t>(str.size()));
+        s.write(str.data(), str.size());
+    }
+
+    inline void writeDotnetString(std::ostream& s, const std::string& str) {
+        writeUleb128(s, static_cast<uint32_t>(str.size()));
+        s.write(str.data(), str.size());
+    }
+
+    inline std::vector<uint8_t> gzipCompress(const std::vector<uint8_t>& data) {
+        z_stream zs{};
+        deflateInit2(&zs, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
+        std::vector<uint8_t> out(data.size() * 2 + 1024);
+        zs.next_in   = const_cast<Bytef*>(data.data());
+        zs.avail_in  = static_cast<uInt>(data.size());
+        zs.next_out  = out.data();
+        zs.avail_out = static_cast<uInt>(out.size());
+        int res = deflate(&zs, Z_FINISH);
+        deflateEnd(&zs);
+        if (res != Z_STREAM_END) throw std::runtime_error("gzip compress failed");
+        out.resize(zs.total_out);
+        return out;
+    }
+
+    // Write collection.db (stable native format)
+    inline void writeCollectionDb(const std::string& path, const std::vector<models::Collection>& collections) {
+        std::ofstream file(path, std::ios::binary);
+        if (!file) throw std::runtime_error("Cannot write: " + path);
+        writeVal<uint32_t>(file, 20230803);
+        writeVal<uint32_t>(file, static_cast<uint32_t>(collections.size()));
+        for (const auto& col : collections) {
+            writeOsuString(file, col.name);
+            writeVal<uint32_t>(file, static_cast<uint32_t>(col.hashes.size()));
+            for (const auto& hash : col.hashes) writeOsuString(file, hash);
+        }
+    }
+
+    // Write osdb (CollectionManager format o!dm8, compressed)
+    inline void writeOsdb(std::ostream& output, const std::vector<models::Collection>& collections) {
+        std::ostringstream inner;
+        writeDotnetString(inner, "o!dm8");
+
+        auto now = std::chrono::system_clock::now();
+        double oaDate = 25569.0 + std::chrono::duration<double>(now.time_since_epoch()).count() / 86400.0;
+        writeVal<double>(inner, oaDate);
+        writeDotnetString(inner, "");
+        writeVal<int32_t>(inner, static_cast<int32_t>(collections.size()));
+
+        for (const auto& col : collections) {
+            writeDotnetString(inner, col.name);
+            writeVal<int32_t>(inner, 0);
+            writeVal<int32_t>(inner, static_cast<int32_t>(col.beatmaps.size()));
+            for (const auto& b : col.beatmaps) {
+                writeVal<int32_t>(inner, b.beatmapId);
+                writeVal<int32_t>(inner, b.beatmapSetId);
+                writeDotnetString(inner, b.artist);
+                writeDotnetString(inner, b.title);
+                writeDotnetString(inner, b.difficulty);
+                writeDotnetString(inner, b.md5);
+                writeDotnetString(inner, "");  // userComment
+                writeVal<uint8_t>(inner, 0);   // playMode
+                writeVal<double>(inner, b.starRating);
+            }
+            writeVal<int32_t>(inner, 0); // hash-only count
+        }
+        writeDotnetString(inner, "By Piotrekol");
+
+        std::string innerStr = inner.str();
+        std::vector<uint8_t> bytes(innerStr.begin(), innerStr.end());
+        auto compressed = gzipCompress(bytes);
+
+        writeDotnetString(output, "o!dm8");
+        output.write(reinterpret_cast<const char*>(compressed.data()), compressed.size());
+    }
+
+    inline void writeOsdb(const std::string& path, const std::vector<models::Collection>& collections) {
+        std::ofstream file(path, std::ios::binary);
+        if (!file) throw std::runtime_error("Cannot write: " + path);
+        writeOsdb(file, collections);
+    }
+}
+
