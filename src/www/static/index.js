@@ -1,6 +1,8 @@
 'use strict';
 
-let showMD5Column = true;
+let hideUnknownMaps = false;
+
+const hiddenColumns = new Set();
 
 const collectionCounts = {};
 const tableSortState = {};
@@ -80,11 +82,71 @@ function switchTab(mode) {
     if (button) bootstrap.Tab.getOrCreateInstance(button).show();
 }
 
-function toggleMD5() {
-    showMD5Column = !showMD5Column;
-    document.getElementById('md5-toggle-item').textContent = showMD5Column ? 'Hide MD5' : 'Show MD5';
-    document.querySelectorAll('.col-md5').forEach(cell => cell.classList.toggle('d-none', !showMD5Column));
+
+function toggleHideUnknown() {
+    hideUnknownMaps = !hideUnknownMaps;
+    document.getElementById('hide-unknown-item').textContent =
+        hideUnknownMaps ? 'Show Unknown Maps' : 'Hide Unknown Maps';
+    document.querySelectorAll('.beatmap-row[data-unknown]').forEach(row => {
+        row.classList.toggle('d-none', hideUnknownMaps);
+    });
 }
+
+const columnDefs = [
+    { name: 'Title',      col: 'title',      hideable: false },
+    { name: 'Artist',     col: 'artist',     hideable: true },
+    { name: 'Difficulty', col: 'difficulty', hideable: true },
+    { name: 'Mapper',     col: 'mapper',     hideable: true },
+    { name: 'Stars',      col: 'stars',      hideable: true },
+    { name: 'ID',         col: 'id',         hideable: true },
+    { name: 'Set',        col: 'setid',      hideable: true },
+    { name: 'MD5',        col: 'md5',        hideable: true, extraClass: 'col-md5' },
+];
+
+function setColumnVisible(col, visible) {
+    if (!visible) hiddenColumns.add(col); else hiddenColumns.delete(col);
+    document.querySelectorAll(`[data-col="${col}"]`).forEach(el => el.classList.toggle('d-none', !visible));
+}
+
+function showColumnMenu(event) {
+    event.preventDefault();
+    const menu = document.getElementById('col-context-menu');
+    menu.innerHTML = '';
+
+    columnDefs.forEach(def => {
+        const item = document.createElement('div');
+        item.className = 'col-context-item' + (!def.hideable ? ' disabled' : '');
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = !hiddenColumns.has(def.col);
+        checkbox.disabled = !def.hideable;
+
+        const label = document.createElement('span');
+        label.textContent = def.name;
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
+
+        if (def.hideable) {
+            item.addEventListener('click', () => {
+                const visible = hiddenColumns.has(def.col);
+                checkbox.checked = visible;
+                setColumnVisible(def.col, visible);
+            });
+        }
+        menu.appendChild(item);
+    });
+
+    menu.style.left = Math.min(event.clientX, window.innerWidth - 180) + 'px';
+    menu.style.top = Math.min(event.clientY, window.innerHeight - menu.offsetHeight - 8) + 'px';
+    menu.classList.remove('d-none');
+}
+
+document.addEventListener('click', () => {
+    document.getElementById('col-context-menu').classList.add('d-none');
+});
+
 
 async function reloadAll() {
     setStatus('Reloading...');
@@ -93,19 +155,18 @@ async function reloadAll() {
     setStatus('Ready');
 }
 
-function sortTable(tableId, columnIndex) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
+function sortList(listId, columnIndex) {
+    const list = document.getElementById(listId);
+    if (!list) return;
 
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const rows = Array.from(list.querySelectorAll('.beatmap-row'));
 
-    if (!tableOrigOrder[tableId]) {
+    if (!tableOrigOrder[listId]) {
         rows.forEach((row, index) => { row.dataset.origIndex = index; });
-        tableOrigOrder[tableId] = true;
+        tableOrigOrder[listId] = true;
     }
 
-    const prevSort = tableSortState[tableId] || { column: -1, direction: 0 };
+    const prevSort = tableSortState[listId] || { column: -1, direction: 0 };
     let direction;
 
     if (prevSort.column !== columnIndex) direction = 1;
@@ -113,9 +174,9 @@ function sortTable(tableId, columnIndex) {
     else if (prevSort.direction === -1) direction = 0;
     else direction = 1;
 
-    tableSortState[tableId] = { column: columnIndex, direction };
+    tableSortState[listId] = { column: columnIndex, direction };
 
-    table.querySelectorAll('thead th').forEach((header, index) => {
+    list.querySelectorAll('.beatmap-header .beatmap-col').forEach((header, index) => {
         header.textContent = header.textContent.replace(/ [▲▼]$/, '');
         if (index === columnIndex && direction !== 0)
             header.textContent += direction === 1 ? ' ▲' : ' ▼';
@@ -124,62 +185,86 @@ function sortTable(tableId, columnIndex) {
     if (direction === 0) {
         rows.slice()
             .sort((a, b) => Number(a.dataset.origIndex) - Number(b.dataset.origIndex))
-            .forEach(row => tbody.appendChild(row));
+            .forEach(row => list.appendChild(row));
         return;
     }
 
     const isStarsColumn = columnIndex === 4;
     rows.sort((a, b) => {
-        const aText = a.cells[columnIndex] ? a.cells[columnIndex].textContent.trim() : '';
-        const bText = b.cells[columnIndex] ? b.cells[columnIndex].textContent.trim() : '';
+        const aCols = a.querySelectorAll('.beatmap-col');
+        const bCols = b.querySelectorAll('.beatmap-col');
+        const aText = aCols[columnIndex] ? aCols[columnIndex].textContent.trim() : '';
+        const bText = bCols[columnIndex] ? bCols[columnIndex].textContent.trim() : '';
         return direction * (isStarsColumn
             ? (parseFloat(aText) || 0) - (parseFloat(bText) || 0)
             : aText.localeCompare(bText));
     });
-    rows.forEach(row => tbody.appendChild(row));
+    rows.forEach(row => list.appendChild(row));
 }
 
-function buildBeatmapTable(collection, tableId) {
-    const columns = ['Title', 'Artist', 'Difficulty', 'Mapper', 'Stars', 'MD5'];
+function buildBeatmapList(collection, listId) {
+    const list = cloneTemplate('tmpl-beatmap-list');
+    list.id = listId;
 
-    const table = cloneTemplate('tmpl-beatmap-table');
-    table.id = tableId;
-
-    const headerRow = table.querySelector('thead tr');
-    columns.forEach((name, index) => {
-        const th = cloneTemplate('tmpl-beatmap-th');
-        th.textContent = name;
-        if (index === 5) {
-            th.classList.add('col-md5');
-            if (!showMD5Column) th.classList.add('d-none');
-        }
-        th.addEventListener('click', () => sortTable(tableId, index));
-        headerRow.appendChild(th);
+    const header = cloneTemplate('tmpl-beatmap-header');
+    columnDefs.forEach((def, index) => {
+        const headerCol = cloneTemplate('tmpl-beatmap-header-col');
+        headerCol.textContent = def.name;
+        headerCol.dataset.col = def.col;
+        if (def.extraClass) headerCol.classList.add(def.extraClass);
+        if (hiddenColumns.has(def.col)) headerCol.classList.add('d-none');
+        headerCol.addEventListener('click', () => sortList(listId, index));
+        header.appendChild(headerCol);
     });
+    list.appendChild(header);
 
-    const tbody = table.querySelector('tbody');
     collection.beatmaps.forEach(beatmap => {
+        const notDownloaded = !beatmap.title || beatmap.title === '(not downloaded)';
         const row = cloneTemplate('tmpl-beatmap-row');
-        const cells = row.querySelectorAll('td');
-        const notDownloaded = beatmap.title === '(not downloaded)';
 
         if (notDownloaded) {
             row.classList.add('text-muted', 'fst-italic');
-            cells[0].innerHTML = '<em>not downloaded</em>';
-        } else {
-            cells[0].textContent = beatmap.title;
+            row.dataset.unknown = '1';
+            if (hideUnknownMaps) row.classList.add('d-none');
         }
-        cells[1].textContent = beatmap.artist;
-        cells[2].textContent = beatmap.difficulty;
-        cells[3].textContent = beatmap.mapper;
-        cells[4].textContent = formatStars(beatmap.stars);
-        cells[5].textContent = beatmap.md5;
-        if (!showMD5Column) cells[5].classList.add('d-none');
 
-        tbody.appendChild(row);
+        columnDefs.forEach(def => {
+            const cell = row.querySelector(`[data-col="${def.col}"]`);
+            if (!cell) return;
+            if (def.extraClass) cell.classList.add(def.extraClass);
+            if (hiddenColumns.has(def.col)) cell.classList.add('d-none');
+
+            if (def.col === 'title') {
+                cell.textContent = notDownloaded ? 'not downloaded' : beatmap.title;
+            } else if (def.col === 'artist') {
+                cell.textContent = beatmap.artist;
+            } else if (def.col === 'difficulty') {
+                cell.textContent = beatmap.difficulty;
+            } else if (def.col === 'mapper') {
+                cell.textContent = beatmap.mapper;
+            } else if (def.col === 'stars') {
+                cell.textContent = formatStars(beatmap.stars);
+            } else if (def.col === 'id' && beatmap.id > 0) {
+                const link = document.createElement('a');
+                link.href = 'https://osu.ppy.sh/b/' + beatmap.id;
+                link.target = '_blank';
+                link.textContent = beatmap.id;
+                cell.appendChild(link);
+            } else if (def.col === 'setid' && beatmap.setId > 0) {
+                const link = document.createElement('a');
+                link.href = 'https://osu.ppy.sh/beatmapsets/' + beatmap.setId;
+                link.target = '_blank';
+                link.textContent = beatmap.setId;
+                cell.appendChild(link);
+            } else if (def.col === 'md5') {
+                cell.textContent = beatmap.md5;
+            }
+        });
+
+        list.appendChild(row);
     });
 
-    return table;
+    return list;
 }
 
 function renderBeatmaps(collection) {
@@ -193,17 +278,13 @@ function renderBeatmaps(collection) {
         return fragment;
     }
 
-    const tableId = 'tbl-' + (++detailSequence);
+    const listId = 'lst-' + (++detailSequence);
 
     const header = cloneTemplate('tmpl-collection-header');
     header.querySelector('[data-slot="name"]').innerHTML = escapeHtmlKeepLeadingSpaces(collection.name);
     header.querySelector('[data-slot="count"]').textContent = collection.beatmaps.length + ' Maps';
     fragment.appendChild(header);
-
-    const tableWrapper = document.createElement('div');
-    tableWrapper.className = 'table-responsive';
-    tableWrapper.appendChild(buildBeatmapTable(collection, tableId));
-    fragment.appendChild(tableWrapper);
+    fragment.appendChild(buildBeatmapList(collection, listId));
 
     return fragment;
 }

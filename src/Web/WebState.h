@@ -3,10 +3,10 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
-#include <models/collection.h>
-#include <language/registry.h>
-#include <stable/stable_db.h>
-#include <lazer/lazer_db.h>
+#include <Models/Collection.h>
+#include <Language/Registry.h>
+#include <Stable/StableDb.h>
+#include <Lazer/LazerDb.h>
 
 namespace Web::WebHandler {
 

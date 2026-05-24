@@ -12,7 +12,7 @@ namespace Language {
         std::string menuView;
         std::string menuViewStable;
         std::string menuViewLazer;
-        std::string menuViewHideMd5;
+        std::string menuViewHideUnknown;
 
         std::string menuHelp;
         std::string menuHelpAbout;

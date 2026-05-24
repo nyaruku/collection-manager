@@ -1,7 +1,7 @@
 #pragma once
 #include <crow.h>
-#include <web/WebState.h>
-#include <web/Layout.h>
+#include <Web/WebState.h>
+#include <Web/Layout.h>
 
 namespace Web::Routes::Pages {
 

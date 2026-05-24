@@ -1,6 +1,6 @@
-#include <web/WebHandler.h>
-#include <detect.h>
-#include <language/registry.h>
+#include <Web/WebHandler.h>
+#include <Detect.h>
+#include <Language/Registry.h>
 
 #include <cstdlib>
 #include <filesystem>

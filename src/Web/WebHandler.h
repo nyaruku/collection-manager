@@ -1,8 +1,8 @@
 #pragma once
 #include <crow.h>
-#include <web/WebState.h>
-#include <web/RouteRegister.h>
-#include <web/scss.h>
+#include <Web/WebState.h>
+#include <Web/RouteRegister.h>
+#include <Web/Scss.h>
 
 namespace Web::WebHandler {
 

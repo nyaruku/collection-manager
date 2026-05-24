@@ -1,7 +1,7 @@
 #pragma once
 #include <crow.h>
-#include <web/WebState.h>
-#include <web/i18n.h>
+#include <Web/WebState.h>
+#include <Web/I18n.h>
 
 namespace Web::Layout {
     inline crow::response render() {

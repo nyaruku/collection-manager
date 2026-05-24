@@ -1,5 +1,5 @@
 #pragma once
-#include <language/translation.h>
+#include <Language/Translation.h>
 
 namespace Language {
     inline Translation english() {
@@ -13,7 +13,7 @@ namespace Language {
         t.menuView = "View";
         t.menuViewStable = "Stable";
         t.menuViewLazer = "Lazer";
-        t.menuViewHideMd5 = "Hide MD5";
+        t.menuViewHideUnknown = "Hide Unknown Maps";
 
         t.menuHelp = "Help";
         t.menuHelpAbout = "About";
@@ -24,8 +24,8 @@ namespace Language {
         t.statusReady = "Ready";
 
         t.aboutDialogTitle = "About osu! Collection Manager";
-        t.aboutVersion = "Version 0.1.0";
-        t.aboutDesc = "Browse and manage your osu! collections from both stable and lazer.";
+        t.aboutVersion = std::string("Version ") + COLLECTION_MANAGER_VERSION;
+        t.aboutDesc = "Browse and manage osu! collections from both stable and lazer.";
         t.aboutFormats = "Supports collection.db (stable) and client.realm (lazer).";
 
         t.paneCollectionsLabel = "Collections";

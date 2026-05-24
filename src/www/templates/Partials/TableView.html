@@ -1,29 +1,30 @@
-<template id="tmpl-beatmap-table">
-    <table class="table table-hover table-sm table-bordered mb-0">
-        <thead>
-            <tr class="d-none d-lg-table-row"></tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<template id="tmpl-beatmap-list">
+    <div class="beatmap-list"></div>
 </template>
 
-<template id="tmpl-beatmap-th">
-    <th class="py-0 px-1 bg-black sortable-header"></th>
+<template id="tmpl-beatmap-header">
+    <div class="beatmap-header" oncontextmenu="showColumnMenu(event)"></div>
+</template>
+
+<template id="tmpl-beatmap-header-col">
+    <div class="beatmap-col sortable-header"></div>
 </template>
 
 <template id="tmpl-beatmap-row">
-    <tr class="d-flex d-lg-table-row flex-column text-break-lg">
-        <td class="py-0 px-1"></td>
-        <td class="py-0 px-1"></td>
-        <td class="py-0 px-1"></td>
-        <td class="py-0 px-1"></td>
-        <td class="py-0 px-1 text-warning"></td>
-        <td class="py-0 px-1 font-monospace text-muted col-md5"></td>
-    </tr>
+    <div class="beatmap-row">
+        <div class="beatmap-col" data-col="title"></div>
+        <div class="beatmap-col text-muted" data-col="artist"></div>
+        <div class="beatmap-col text-muted" data-col="difficulty"></div>
+        <div class="beatmap-col text-muted" data-col="mapper"></div>
+        <div class="beatmap-col text-warning" data-col="stars"></div>
+        <div class="beatmap-col" data-col="id"></div>
+        <div class="beatmap-col" data-col="setid"></div>
+        <div class="beatmap-col font-monospace text-muted" data-col="md5"></div>
+    </div>
 </template>
 
 <template id="tmpl-collection-header">
-    <div class="px-2 border-bottom bg-dark-subtle d-flex align-items-center">
+    <div class="px-2 py-1 collection-header d-flex align-items-center">
         <span data-slot="name" class="fw-semibold"></span>
         <span data-slot="count" class="text-muted ms-2"></span>
     </div>
@@ -37,4 +38,3 @@
         </div>
     </button>
 </template>
-

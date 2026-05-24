@@ -1,8 +1,8 @@
 #pragma once
-#include <web/Routes/Pages/IndexRoute.h>
-#include <web/Routes/Api/StableRoute.h>
-#include <web/Routes/Api/LazerRoute.h>
-#include <web/Routes/Api/ReloadRoute.h>
+#include <Web/Routes/Pages/IndexRoute.h>
+#include <Web/Routes/Api/StableRoute.h>
+#include <Web/Routes/Api/LazerRoute.h>
+#include <Web/Routes/Api/ReloadRoute.h>
 
 namespace Web::RouteRegister {
 

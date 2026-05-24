@@ -1,13 +1,28 @@
 $font-size-base: .8rem;
 
+$body-bg-dark: #0d0f14;
+$body-secondary-bg-dark: #1a1d25;
+$dark-bg-subtle-dark: #13151c;
+$border-color-dark: #252830;
+
+$cm-bg-card: #13151c;
+$cm-bg-hover: #1a1d25;
+$cm-border: #252830;
+$cm-radius-row: 6px;
+
 @import "bootstrap-5.3.8/scss/bootstrap";
+
+.navbar-brand-text {
+    color: $info;
+    font-weight: $font-weight-semibold;
+}
 
 .navbar-dropdown {
     min-width: 160px;
 }
 
 .about-dialog {
-    z-index: 1060;
+    z-index: $zindex-modal;
     width: 340px;
     user-select: none;
 }
@@ -26,6 +41,90 @@ $font-size-base: .8rem;
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+}
+
+// ── Beatmap list ──────────────────────────────────────────────────────────────
+.beatmap-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px;
+}
+
+.beatmap-header {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: $body-bg-dark;
+    padding: .15rem .5rem;
+    border-bottom: 1px solid $cm-border;
+    color: var(--bs-secondary-color);
+
+    @include media-breakpoint-up(lg) { display: flex; }
+}
+
+.beatmap-row {
+    display: block;
+    background: $cm-bg-card;
+    border: 1px solid $cm-border;
+    border-radius: $cm-radius-row;
+    padding: .3rem .5rem;
+    transition: background $transition-base;
+
+    &:hover { background: $cm-bg-hover; }
+
+    @include media-breakpoint-up(lg) {
+        display: flex;
+        align-items: center;
+        padding: .1rem .5rem;
+    }
+}
+
+.beatmap-col {
+    min-width: 0;
+    padding: 0 .25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    @include media-breakpoint-down(lg) { white-space: normal; }
+}
+
+.beatmap-list {
+    [data-col="title"]      { flex: 3; }
+    [data-col="artist"]     { flex: 2; }
+    [data-col="difficulty"] { flex: 1; }
+    [data-col="mapper"]     { flex: 1; }
+    [data-col="stars"]      { flex: 0 0 5rem; }
+    [data-col="id"]         { flex: 0 0 4rem; }
+    [data-col="setid"]      { flex: 0 0 4rem; }
+    [data-col="md5"]        { flex: 0 0 16rem; }
+}
+
+.collection-header {
+    background: $cm-bg-card;
+    border-bottom: 1px solid $cm-border;
+}
+
+.col-context-menu {
+    z-index: $zindex-modal;
+    background: var(--bs-body-bg);
+    min-width: 160px;
+    padding: .25rem 0;
+    font-size: $font-size-base;
+
+    .col-context-item {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .25rem .75rem;
+        cursor: pointer;
+        user-select: none;
+
+        &:hover { background: $cm-bg-hover; }
+        &.disabled { opacity: .4; cursor: default; &:hover { background: transparent; } }
+    }
 }
 
 @include media-breakpoint-down(lg) {

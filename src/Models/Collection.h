@@ -11,6 +11,8 @@ namespace models {
         std::string difficulty;
         std::string mapper;
         double starRating = 0.0;
+        int32_t beatmapId = 0;
+        int32_t beatmapSetId = 0;
     };
 
     inline void to_json(nlohmann::json& j, const Beatmap& b) {
@@ -21,6 +23,8 @@ namespace models {
             {"difficulty", b.difficulty},
             {"mapper", b.mapper},
             {"stars", b.starRating},
+            {"id", b.beatmapId},
+            {"setId", b.beatmapSetId},
         };
     }
 

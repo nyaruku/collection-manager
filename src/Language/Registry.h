@@ -3,9 +3,9 @@
 #include <string>
 #include <unordered_map>
 
-#include <language/translation.h>
-#include <language/english.h>
-#include <language/german.h>
+#include <Language/Translation.h>
+#include <Language/English.h>
+#include <Language/German.h>
 
 namespace Language {
     inline const std::unordered_map<std::string, std::function<Translation()>> languages = {

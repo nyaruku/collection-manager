@@ -1,7 +1,7 @@
 #pragma once
 
 #include <crow/mustache.h>
-#include <language/translation.h>
+#include <Language/Translation.h>
 
 namespace Web {
     static void applyTranslations(crow::mustache::context& ctx, const Language::Translation& translation) {
@@ -12,7 +12,7 @@ namespace Web {
         ctx["menu_view"] = translation.menuView;
         ctx["menu_view_stable"] = translation.menuViewStable;
         ctx["menu_view_lazer"] = translation.menuViewLazer;
-        ctx["menu_view_hide_md5"] = translation.menuViewHideMd5;
+        ctx["menu_view_hide_unknown"] = translation.menuViewHideUnknown;
         ctx["menu_help"] = translation.menuHelp;
         ctx["menu_help_about"] = translation.menuHelpAbout;
         ctx["tab_stable"] = translation.tabStable;

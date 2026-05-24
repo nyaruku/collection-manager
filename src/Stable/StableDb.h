@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <zlib.h>
-#include "models/collection.h"
+#include <Models/Collection.h>
 
 namespace stable {
 
@@ -183,8 +183,8 @@ namespace stable {
 
             skipTimingPoints(file);
 
-            readI32(file); // difficulty_id
-            readI32(file); // beatmap_id
+            beatmap.beatmapId    = readI32(file); // beatmap_id (difficulty)
+            beatmap.beatmapSetId = readI32(file); // beatmapset_id
             readI32(file); // thread_id
             readU8(file); // grade_std
             readU8(file); // grade_taiko
