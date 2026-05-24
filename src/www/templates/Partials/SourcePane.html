@@ -1,8 +1,16 @@
 <div class="tab-pane fade {{active}} h-100" id="{{mode}}-pane" role="tabpanel">
     <div class="d-flex h-100">
         <div class="d-flex flex-column border-end flex-shrink-0 source-pane-sidebar">
-            <div class="px-2 border-bottom bg-dark-subtle">
-                <span class="text-uppercase">{{pane_collections_label}}</span>
+            <div class="border-bottom bg-dark-subtle">
+                <div class="px-2 pt-1">
+                    <span class="text-uppercase small">{{pane_collections_label}}</span>
+                </div>
+                <div class="px-2 pb-1 d-flex align-items-center gap-1 source-pane-actions">
+                    <button class="btn btn-sm py-0 px-1 btn-primary flex-fill" onclick="createCollection('{{mode}}')">{{pane_action_new}}</button>
+                    <button class="btn btn-sm py-0 px-1 btn-primary flex-fill" onclick="importCollections('{{mode}}')">{{pane_action_import}}</button>
+                    <button class="btn btn-sm py-0 px-1 btn-primary flex-fill" onclick="saveCollections('{{mode}}')">{{pane_action_save}}</button>
+                    <button class="btn btn-sm py-0 px-1 btn-primary flex-fill" onclick="backupCollections('{{mode}}')">{{pane_action_backup}}</button>
+                </div>
             </div>
             <div class="overflow-y-auto flex-grow-1">
                 <div class="list-group list-group-flush" id="{{mode}}-list">
