@@ -9,6 +9,8 @@ $cm-bg-card: #13151c;
 $cm-bg-hover: #3a3d45;
 $cm-radius-row: 6px;
 $cm-border: $cm-bg-hover;
+$cm-row-height: 28px;
+$cm-row-gap: 4px;
 
 @import "bootstrap-5.3.8/scss/bootstrap";
 
@@ -36,6 +38,10 @@ $cm-border: $cm-bg-hover;
     min-width: 100px;
 }
 
+.source-pane-actions {
+    flex-wrap: wrap;
+}
+
 .sortable-header {
     cursor: pointer;
     user-select: none;
@@ -43,10 +49,20 @@ $cm-border: $cm-bg-hover;
 }
 
 .beatmap-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: block;
     padding: 4px;
+}
+
+.beatmap-virtual-body {
+    position: relative;
+    min-height: 0;
+
+    .beatmap-virtual-window {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 0;
+    }
 }
 
 .beatmap-header {
@@ -56,6 +72,7 @@ $cm-border: $cm-bg-hover;
     z-index: 1;
     background: $body-bg-dark;
     padding: .15rem .5rem;
+    margin-bottom: $cm-row-gap;
     border-bottom: 1px solid $cm-border;
     color: var(--bs-secondary-color);
 
@@ -68,7 +85,10 @@ $cm-border: $cm-bg-hover;
     border: 1px solid $cm-border;
     border-radius: $cm-radius-row;
     padding: .3rem .5rem;
+    margin-bottom: $cm-row-gap;
     transition: background $transition-base;
+    user-select: none;
+
     &:hover {
       background: $cm-bg-hover;
     }
@@ -76,7 +96,13 @@ $cm-border: $cm-bg-hover;
     @include media-breakpoint-up(lg) {
         display: flex;
         align-items: center;
+        height: $cm-row-height;
         padding: .1rem .5rem;
+    }
+
+    &.beatmap-row-selected {
+        border-color: $info;
+        box-shadow: inset 0 0 0 1px $info;
     }
 }
 
