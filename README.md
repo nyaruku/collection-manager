@@ -1,6 +1,12 @@
 # collection-manager
 Manage osu! Stable and Lazer collections side by side on Linux.
 
+## Installation (Arch Linux)
+
+```bash
+yay -S collection-manager-git
+```
+
 ## Dependencies
 
 - CMake 3.20+
