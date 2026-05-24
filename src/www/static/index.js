@@ -58,20 +58,21 @@ function showAbout() {
     });
 })();
 
-function escapeHtml(str) {
+// Replaces leading spaces with &nbsp; so browsers don't collapse them.
+function escapeHtmlKeepLeadingSpaces(str) {
     return (str || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
-// Replaces leading spaces with &nbsp; so browsers don't collapse them.
-function escapeHtmlKeepLeadingSpaces(str) {
-    return escapeHtml(str).replace(/^ +/, spaces => '&nbsp;'.repeat(spaces.length));
+        .replace(/>/g, '&gt;')
+        .replace(/^ +/, spaces => '&nbsp;'.repeat(spaces.length));
 }
 
 function formatStars(rating) {
     return rating > 0 ? rating.toFixed(2) + '\u2605' : '';
+}
+
+function cloneTemplate(id) {
+    return document.getElementById(id).content.cloneNode(true).firstElementChild;
 }
 
 function switchTab(mode) {
@@ -138,66 +139,104 @@ function sortTable(tableId, columnIndex) {
     rows.forEach(row => tbody.appendChild(row));
 }
 
-function buildBeatmapTable(collection, tableId, md5Class) {
+function buildBeatmapTable(collection, tableId) {
     const columns = ['Title', 'Artist', 'Difficulty', 'Mapper', 'Stars', 'MD5'];
 
-    const headers = columns.map((name, index) => {
-        const extra = index === 5 ? ' ' + md5Class : '';
-        return `<th class="py-0 px-1 bg-black sortable-header${extra}"
-                    onclick="sortTable('${tableId}', ${index})">${name}</th>`;
-    }).join('');
+    const table = cloneTemplate('tmpl-beatmap-table');
+    table.id = tableId;
 
-    const rows = collection.beatmaps.map(beatmap => {
+    const headerRow = table.querySelector('thead tr');
+    columns.forEach((name, index) => {
+        const th = cloneTemplate('tmpl-beatmap-th');
+        th.textContent = name;
+        if (index === 5) {
+            th.classList.add('col-md5');
+            if (!showMD5Column) th.classList.add('d-none');
+        }
+        th.addEventListener('click', () => sortTable(tableId, index));
+        headerRow.appendChild(th);
+    });
+
+    const tbody = table.querySelector('tbody');
+    collection.beatmaps.forEach(beatmap => {
+        const row = cloneTemplate('tmpl-beatmap-row');
+        const cells = row.querySelectorAll('td');
         const notDownloaded = beatmap.title === '(not downloaded)';
-        const rowClass = notDownloaded ? ' class="text-muted fst-italic"' : '';
-        const titleCell = notDownloaded ? '<em>not downloaded</em>' : escapeHtml(beatmap.title);
-        return `<tr${rowClass}>
-            <td class="py-0 px-1">${titleCell}</td>
-            <td class="py-0 px-1">${escapeHtml(beatmap.artist)}</td>
-            <td class="py-0 px-1">${escapeHtml(beatmap.difficulty)}</td>
-            <td class="py-0 px-1">${escapeHtml(beatmap.mapper)}</td>
-            <td class="py-0 px-1 text-warning">${formatStars(beatmap.stars)}</td>
-            <td class="py-0 px-1 font-monospace text-muted ${md5Class}">${beatmap.md5}</td>
-        </tr>`;
-    }).join('');
 
-    return `<table id="${tableId}" class="table table-hover table-sm table-bordered mb-0">
-        <thead class="sticky-top"><tr>${headers}</tr></thead>
-        <tbody>${rows}</tbody>
-    </table>`;
+        if (notDownloaded) {
+            row.classList.add('text-muted', 'fst-italic');
+            cells[0].innerHTML = '<em>not downloaded</em>';
+        } else {
+            cells[0].textContent = beatmap.title;
+        }
+        cells[1].textContent = beatmap.artist;
+        cells[2].textContent = beatmap.difficulty;
+        cells[3].textContent = beatmap.mapper;
+        cells[4].textContent = formatStars(beatmap.stars);
+        cells[5].textContent = beatmap.md5;
+        if (!showMD5Column) cells[5].classList.add('d-none');
+
+        tbody.appendChild(row);
+    });
+
+    return table;
 }
 
 function buildBeatmapCards(collection) {
-    return collection.beatmaps.map(beatmap => {
+    const fragment = document.createDocumentFragment();
+
+    collection.beatmaps.forEach(beatmap => {
+        const card = cloneTemplate('tmpl-beatmap-card');
         const notDownloaded = beatmap.title === '(not downloaded)';
-        return `<div class="list-group-item list-group-item-action p-2 border-0 border-bottom${notDownloaded ? ' text-muted' : ''}">
-            <div class="${notDownloaded ? 'fst-italic' : 'fw-semibold'} text-truncate">${notDownloaded ? 'not downloaded' : escapeHtml(beatmap.title)}</div>
-            <div class="text-muted">${escapeHtml(beatmap.artist)}</div>
-            <div class="d-flex gap-3 mt-1">
-                <span class="text-muted">${escapeHtml(beatmap.difficulty)}</span>
-                <span class="text-muted">${escapeHtml(beatmap.mapper)}</span>
-                <span class="text-warning ms-auto">${formatStars(beatmap.stars)}</span>
-            </div>
-        </div>`;
-    }).join('');
+        const titleEl = card.querySelector('[data-slot="title"]');
+
+        if (notDownloaded) {
+            card.classList.add('text-muted');
+            titleEl.classList.replace('fw-semibold', 'fst-italic');
+            titleEl.textContent = 'not downloaded';
+        } else {
+            titleEl.textContent = beatmap.title;
+        }
+        card.querySelector('[data-slot="artist"]').textContent = beatmap.artist;
+        card.querySelector('[data-slot="difficulty"]').textContent = beatmap.difficulty;
+        card.querySelector('[data-slot="mapper"]').textContent = beatmap.mapper;
+        card.querySelector('[data-slot="stars"]').textContent = formatStars(beatmap.stars);
+
+        fragment.appendChild(card);
+    });
+
+    return fragment;
 }
 
 function renderBeatmaps(collection) {
-    const name = escapeHtmlKeepLeadingSpaces(collection.name);
+    const fragment = document.createDocumentFragment();
 
-    if (!collection.beatmaps || collection.beatmaps.length === 0)
-        return `<p class="text-muted p-2 m-0">${name} - no beatmaps</p>`;
+    if (!collection.beatmaps || collection.beatmaps.length === 0) {
+        const p = document.createElement('p');
+        p.className = 'text-muted p-2 m-0';
+        p.innerHTML = escapeHtmlKeepLeadingSpaces(collection.name) + ' - no beatmaps';
+        fragment.appendChild(p);
+        return fragment;
+    }
 
     const tableId = 'tbl-' + (++detailSequence);
-    const md5Class = 'col-md5' + (showMD5Column ? '' : ' d-none');
 
-    return `
-        <div class="px-2 border-bottom bg-dark-subtle d-flex align-items-center">
-            <span class="fw-semibold">${name}</span>
-            <span class="text-muted ms-2">${collection.beatmaps.length} Maps</span>
-        </div>
-        <div class="d-none d-md-block">${buildBeatmapTable(collection, tableId, md5Class)}</div>
-        <div class="d-md-none list-group list-group-flush">${buildBeatmapCards(collection)}</div>`;
+    const header = cloneTemplate('tmpl-collection-header');
+    header.querySelector('[data-slot="name"]').innerHTML = escapeHtmlKeepLeadingSpaces(collection.name);
+    header.querySelector('[data-slot="count"]').textContent = collection.beatmaps.length + ' Maps';
+    fragment.appendChild(header);
+
+    const tableWrapper = document.createElement('div');
+    tableWrapper.className = 'd-none d-md-block';
+    tableWrapper.appendChild(buildBeatmapTable(collection, tableId));
+    fragment.appendChild(tableWrapper);
+
+    const cardsWrapper = document.createElement('div');
+    cardsWrapper.className = 'd-md-none list-group list-group-flush';
+    cardsWrapper.appendChild(buildBeatmapCards(collection));
+    fragment.appendChild(cardsWrapper);
+
+    return fragment;
 }
 
 async function loadCollections(mode) {
@@ -212,28 +251,30 @@ async function loadCollections(mode) {
         updateStatusCounts();
 
         if (collections.length === 0) {
-            listElement.innerHTML = '<div class="list-group-item text-muted py-1 border-0 fst-italic">No collections</div>';
+            const div = document.createElement('div');
+            div.className = 'list-group-item text-muted py-1 border-0 fst-italic';
+            div.textContent = 'No collections';
+            listElement.replaceChildren(div);
             return;
         }
 
-        listElement.innerHTML = collections.map(collection => {
-            const safeName = (collection.name || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-            const displayName = escapeHtmlKeepLeadingSpaces(collection.name) || '<em class="text-muted">(unnamed)</em>';
-            return `
-                <button type="button"
-                        class="list-group-item list-group-item-action py-1 px-2 border-0 rounded-0"
-                        data-name="${safeName}"
-                        onclick="selectCollection('${mode}', this)">
-                    <div class="d-flex justify-content-between align-items-center gap-1">
-                        <span class="text-truncate">${displayName}</span>
-                        <span class="badge bg-white text-black fw-normal flex-shrink-0 small">${collection.count}</span>
-                    </div>
-                </button>
-            `;
-        }).join('');
+        const fragment = document.createDocumentFragment();
+        collections.forEach(collection => {
+            const item = cloneTemplate('tmpl-collection-item');
+            item.dataset.name = collection.name || '';
+            item.querySelector('[data-slot="name"]').innerHTML =
+                escapeHtmlKeepLeadingSpaces(collection.name) || '<em class="text-muted">(unnamed)</em>';
+            item.querySelector('[data-slot="count"]').textContent = collection.count;
+            item.addEventListener('click', () => selectCollection(mode, item));
+            fragment.appendChild(item);
+        });
+        listElement.replaceChildren(fragment);
 
     } catch (error) {
-        listElement.innerHTML = `<div class="list-group-item text-danger py-1 border-0">${escapeHtml(error.message)}</div>`;
+        const div = document.createElement('div');
+        div.className = 'list-group-item text-danger py-1 border-0';
+        div.textContent = error.message;
+        listElement.replaceChildren(div);
         setStatus('Error: ' + error.message);
     }
 }
@@ -245,17 +286,23 @@ async function selectCollection(mode, element) {
 
     const name = element.dataset.name;
     const detailPanel = document.getElementById(mode + '-detail');
-    detailPanel.innerHTML = '<p class="text-muted p-2 m-0">Loading...</p>';
+    const loading = document.createElement('p');
+    loading.className = 'text-muted p-2 m-0';
+    loading.textContent = 'Loading...';
+    detailPanel.replaceChildren(loading);
     setStatus('Loading "' + name + '"...');
 
     try {
         const response = await fetch('/api/' + mode + '/collections?name=' + encodeURIComponent(name));
         if (!response.ok) throw new Error(await response.text());
         const collection = await response.json();
-        detailPanel.innerHTML = renderBeatmaps(collection);
+        detailPanel.replaceChildren(renderBeatmaps(collection));
         setStatus('"' + name + '" - ' + (collection.beatmaps ? collection.beatmaps.length : 0) + ' beatmaps');
     } catch (error) {
-        detailPanel.innerHTML = `<div class="alert alert-danger m-2 py-1 rounded-0">${escapeHtml(error.message)}</div>`;
+        const div = document.createElement('div');
+        div.className = 'alert alert-danger m-2 py-1 rounded-0';
+        div.textContent = error.message;
+        detailPanel.replaceChildren(div);
         setStatus('Error: ' + error.message);
     }
 }

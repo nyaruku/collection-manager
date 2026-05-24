@@ -1,0 +1,52 @@
+<template id="tmpl-beatmap-table">
+    <table class="table table-hover table-sm table-bordered mb-0">
+        <thead>
+            <tr></tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</template>
+
+<template id="tmpl-beatmap-th">
+    <th class="py-0 px-1 bg-black sortable-header"></th>
+</template>
+
+<template id="tmpl-beatmap-row">
+    <tr>
+        <td class="py-0 px-1"></td>
+        <td class="py-0 px-1"></td>
+        <td class="py-0 px-1"></td>
+        <td class="py-0 px-1"></td>
+        <td class="py-0 px-1 text-warning"></td>
+        <td class="py-0 px-1 font-monospace text-muted col-md5"></td>
+    </tr>
+</template>
+
+<template id="tmpl-beatmap-card">
+    <div class="list-group-item list-group-item-action p-2 border-0 border-bottom">
+        <div data-slot="title" class="fw-semibold text-truncate"></div>
+        <div data-slot="artist" class="text-muted"></div>
+        <div class="d-flex gap-3 mt-1">
+            <span data-slot="difficulty" class="text-muted"></span>
+            <span data-slot="mapper" class="text-muted"></span>
+            <span data-slot="stars" class="text-warning ms-auto"></span>
+        </div>
+    </div>
+</template>
+
+<template id="tmpl-collection-header">
+    <div class="px-2 border-bottom bg-dark-subtle d-flex align-items-center">
+        <span data-slot="name" class="fw-semibold"></span>
+        <span data-slot="count" class="text-muted ms-2"></span>
+    </div>
+</template>
+
+<template id="tmpl-collection-item">
+    <button type="button" class="list-group-item list-group-item-action py-1 px-2 border-0 rounded-0">
+        <div class="d-flex justify-content-between align-items-center gap-1">
+            <span data-slot="name" class="text-truncate"></span>
+            <span data-slot="count" class="badge bg-white text-black fw-normal flex-shrink-0 small badge-count"></span>
+        </div>
+    </button>
+</template>
+

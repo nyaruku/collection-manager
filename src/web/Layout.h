@@ -28,6 +28,7 @@ namespace Web::Layout {
         ctx["stable_pane"] = crow::mustache::load("Partials/SourcePane.html").render(stableContext).body_;
         ctx["lazer_pane"] = crow::mustache::load("Partials/SourcePane.html").render(lazerContext).body_;
         ctx["about_dialog"] = crow::mustache::load("Partials/AboutDialog.html").render(aboutContext).body_;
+        ctx["table_view"] = crow::mustache::load("Partials/TableView.html").render({}).body_;
         Web::applyTranslations(ctx, Web::WebHandler::config.translation);
 
         crow::mustache::context layoutCtx;
