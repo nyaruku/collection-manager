@@ -65,7 +65,7 @@ namespace Language {
         t.statusRecompilingScss = "Recompiling SCSS...";
         t.statusScssRecompiled = "SCSS recompiled, reload the page to apply changes.";
         t.statusScssError = "SCSS error: {error}";
-        t.unknownError = "unknown error";
+        t.unknownError = "Unknown error";
 
         t.menuRename = "Rename";
         t.menuExportOsdb = "Export as osdb";
@@ -88,8 +88,8 @@ namespace Language {
         t.statusDeletedCollection = "Deleted \"{name}\"";
         t.statusRenamedCollection = "Renamed to \"{name}\"";
 
-        t.statusSaving = "Saving {mode}...";
-        t.statusSaved = "{mode} saved.";
+        t.statusSaving = "Saving {mode} collection....";
+        t.statusSaved = "Save {mode} collection.";
         t.saveError = "Save error: {error}";
         t.statusBackingUp = "Backing up {mode}...";
         t.statusBackupCreated = "{mode} backup created: {path}";

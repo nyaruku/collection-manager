@@ -88,8 +88,8 @@ namespace Language {
         t.statusDeletedCollection = "\"{name}\" gelöscht";
         t.statusRenamedCollection = "Umbenannt zu \"{name}\"";
 
-        t.statusSaving = "Speichere {mode}...";
-        t.statusSaved = "{mode} gespeichert.";
+        t.statusSaving = "Speichere {mode} collection....";
+        t.statusSaved = "{mode} collection gespeichert.";
         t.saveError = "Speichern fehlgeschlagen: {error}";
         t.statusBackingUp = "Erstelle Backup für {mode}...";
         t.statusBackupCreated = "{mode} Backup erstellt: {path}";
