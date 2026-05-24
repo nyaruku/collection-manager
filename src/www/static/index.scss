@@ -1,6 +1,6 @@
-:root {
-    --bs-body-font-size: .8rem;
-}
+$font-size-base: .8rem;
+
+@import "bootstrap-5.3.8/scss/bootstrap";
 
 .navbar-dropdown {
     min-width: 160px;
@@ -28,3 +28,9 @@
     white-space: nowrap;
 }
 
+@include media-breakpoint-down(lg) {
+    .text-break-lg {
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+    }
+}

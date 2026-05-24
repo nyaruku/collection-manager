@@ -2,11 +2,17 @@
 #include <crow.h>
 #include <web/WebState.h>
 #include <web/RouteRegister.h>
+#include <web/scss.h>
 
 namespace Web::WebHandler {
 
     static void start(Config startConfig) {
         config = std::move(startConfig);
+        try {
+            Web::Scss::compile(config.wwwDir + "/static/index.scss", config.wwwDir + "/static/index.css");
+        } catch (const std::exception& error) {
+            CROW_LOG_WARNING << "SCSS compilation failed: " << error.what();
+        }
         loadStable();
         loadLazer();
         app.loglevel(crow::LogLevel::Warning);

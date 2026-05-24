@@ -1,7 +1,7 @@
 <template id="tmpl-beatmap-table">
     <table class="table table-hover table-sm table-bordered mb-0">
         <thead>
-            <tr></tr>
+            <tr class="d-none d-lg-table-row"></tr>
         </thead>
         <tbody></tbody>
     </table>
@@ -12,7 +12,7 @@
 </template>
 
 <template id="tmpl-beatmap-row">
-    <tr>
+    <tr class="d-flex d-lg-table-row flex-column text-break-lg">
         <td class="py-0 px-1"></td>
         <td class="py-0 px-1"></td>
         <td class="py-0 px-1"></td>
@@ -20,18 +20,6 @@
         <td class="py-0 px-1 text-warning"></td>
         <td class="py-0 px-1 font-monospace text-muted col-md5"></td>
     </tr>
-</template>
-
-<template id="tmpl-beatmap-card">
-    <div class="list-group-item list-group-item-action p-2 border-0 border-bottom">
-        <div data-slot="title" class="fw-semibold text-truncate"></div>
-        <div data-slot="artist" class="text-muted"></div>
-        <div class="d-flex gap-3 mt-1">
-            <span data-slot="difficulty" class="text-muted"></span>
-            <span data-slot="mapper" class="text-muted"></span>
-            <span data-slot="stars" class="text-warning ms-auto"></span>
-        </div>
-    </div>
 </template>
 
 <template id="tmpl-collection-header">

@@ -14,6 +14,13 @@ endmacro()
 
 fetch(Crow https://github.com/CrowCpp/Crow.git v1.3.2)
 fetch(nlohmann_json https://github.com/nlohmann/json.git v3.12.0)
+fetch(libsass https://github.com/sass/libsass.git 3.6.6)
+
+file(GLOB LIBSASS_SOURCES "${libsass_SOURCE_DIR}/src/*.cpp" "${libsass_SOURCE_DIR}/src/*.c")
+add_library(sass STATIC ${LIBSASS_SOURCES})
+target_include_directories(sass PUBLIC "${libsass_SOURCE_DIR}/include")
+target_compile_definitions(sass PRIVATE LIBSASS_VERSION="3.6.6")
+set_target_properties(sass PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED ON)
 
 find_package(ZLIB REQUIRED)
 
@@ -40,6 +47,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ZLIB::ZLIB
     cpprealm
     nlohmann_json::nlohmann_json
+    sass
 )
 
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE

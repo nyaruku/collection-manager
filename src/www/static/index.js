@@ -182,32 +182,6 @@ function buildBeatmapTable(collection, tableId) {
     return table;
 }
 
-function buildBeatmapCards(collection) {
-    const fragment = document.createDocumentFragment();
-
-    collection.beatmaps.forEach(beatmap => {
-        const card = cloneTemplate('tmpl-beatmap-card');
-        const notDownloaded = beatmap.title === '(not downloaded)';
-        const titleEl = card.querySelector('[data-slot="title"]');
-
-        if (notDownloaded) {
-            card.classList.add('text-muted');
-            titleEl.classList.replace('fw-semibold', 'fst-italic');
-            titleEl.textContent = 'not downloaded';
-        } else {
-            titleEl.textContent = beatmap.title;
-        }
-        card.querySelector('[data-slot="artist"]').textContent = beatmap.artist;
-        card.querySelector('[data-slot="difficulty"]').textContent = beatmap.difficulty;
-        card.querySelector('[data-slot="mapper"]').textContent = beatmap.mapper;
-        card.querySelector('[data-slot="stars"]').textContent = formatStars(beatmap.stars);
-
-        fragment.appendChild(card);
-    });
-
-    return fragment;
-}
-
 function renderBeatmaps(collection) {
     const fragment = document.createDocumentFragment();
 
@@ -227,14 +201,9 @@ function renderBeatmaps(collection) {
     fragment.appendChild(header);
 
     const tableWrapper = document.createElement('div');
-    tableWrapper.className = 'd-none d-md-block';
+    tableWrapper.className = 'table-responsive';
     tableWrapper.appendChild(buildBeatmapTable(collection, tableId));
     fragment.appendChild(tableWrapper);
-
-    const cardsWrapper = document.createElement('div');
-    cardsWrapper.className = 'd-md-none list-group list-group-flush';
-    cardsWrapper.appendChild(buildBeatmapCards(collection));
-    fragment.appendChild(cardsWrapper);
 
     return fragment;
 }
