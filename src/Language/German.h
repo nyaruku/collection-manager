@@ -14,6 +14,7 @@ namespace Language {
         t.menuViewStable = "Stable";
         t.menuViewLazer = "Lazer";
         t.menuViewHideUnknown = "Unbekannte Maps ausblenden";
+        t.menuViewShowUnknown = "Unbekannte Maps anzeigen";
 
         t.menuHelp = "Hilfe";
         t.menuHelpAbout = "Über";
@@ -36,7 +37,67 @@ namespace Language {
         t.paneCollectionsLabel = "Collections";
         t.paneLoading = "Wird geladen...";
         t.paneSelectPrompt = "Collection auswählen";
+        t.paneActionNew = "Neu";
+        t.paneActionImport = "Import";
+        t.paneActionSave = "Speichern";
+        t.paneActionBackup = "Backup";
+
+        t.columnTitle = "Titel";
+        t.columnArtist = "Artist";
+        t.columnDifficulty = "Difficulty";
+        t.columnMapper = "Mapper";
+        t.columnStars = "Stars";
+        t.columnId = "ID";
+        t.columnSet = "Set";
+        t.columnMd5 = "MD5";
+
+        t.noCollections = "Keine Collections";
+        t.unnamedCollection = "(unbenannt)";
+        t.unknownBeatmapTitle = "nicht heruntergeladen oder alte Version";
+        t.noBeatmaps = "{name} - keine Beatmaps";
+        t.mapCount = "{count} Maps";
+        t.collectionCount = "{mode}: {count} Collections";
+        t.loadingCollection = "Lade \"{name}\"...";
+        t.collectionStatus = "\"{name}\" ({count} Beatmaps)";
+        t.genericError = "Fehler: {error}";
+
+        t.statusReloading = "Lade neu...";
+        t.statusRecompilingScss = "Kompiliere SCSS...";
+        t.statusScssRecompiled = "SCSS kompiliert, bitte die Seite neu laden.";
+        t.statusScssError = "SCSS Fehler: {error}";
+        t.unknownError = "unbekannter Fehler";
+
+        t.menuRename = "Umbenennen";
+        t.menuExportOsdb = "Als osdb exportieren";
+        t.menuCopyTo = "Nach {mode} kopieren";
+        t.menuPasteBeatmaps = "{count} Beatmap(s) einfügen";
+        t.menuDelete = "Löschen";
+        t.menuCopyBeatmaps = "{count} Beatmap(s) kopieren";
+        t.menuRemoveFromCollection = "Aus Collection entfernen";
+
+        t.clipboardEmpty = "Zwischenablage ist leer.";
+        t.copiedBeatmapsFrom = "{count} Beatmap(s) aus \"{name}\" kopiert";
+        t.copiedBeatmapsTo = "{count} Beatmap(s) nach {mode} kopiert";
+        t.pastedBeatmapsInto = "{count} Beatmap(s) in \"{name}\" eingefügt";
+        t.pasteError = "Einfügen fehlgeschlagen: {error}";
+
+        t.promptCollectionName = "Collection-Name:";
+        t.promptNewName = "Neuer Name:";
+        t.confirmDeleteCollection = "\"{name}\" löschen?";
+        t.statusCreatedCollection = "\"{name}\" erstellt";
+        t.statusDeletedCollection = "\"{name}\" gelöscht";
+        t.statusRenamedCollection = "Umbenannt zu \"{name}\"";
+
+        t.statusSaving = "Speichere {mode}...";
+        t.statusSaved = "{mode} gespeichert.";
+        t.saveError = "Speichern fehlgeschlagen: {error}";
+        t.statusBackingUp = "Erstelle Backup für {mode}...";
+        t.statusBackupCreated = "{mode} Backup erstellt: {path}";
+        t.backupError = "Backup fehlgeschlagen: {error}";
+        t.statusImporting = "Importiere {file}...";
+        t.statusImportedCollections = "{count} Collections nach {mode} importiert";
+        t.importError = "Import fehlgeschlagen: {error}";
+        t.exportError = "Export fehlgeschlagen: {error}";
         return t;
     }
 }
-
