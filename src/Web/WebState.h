@@ -25,6 +25,7 @@ namespace Web::WebHandler {
 
     inline std::vector<models::Collection> stableCollections;
     inline std::vector<models::Collection> lazerCollections;
+    inline std::unordered_map<std::string, models::Beatmap> stableBeatmapMap;
 
     static crow::response jsonResponse(nlohmann::json body) {
         crow::response response(body.dump());
@@ -39,8 +40,8 @@ namespace Web::WebHandler {
         try {
             stableCollections = stable::parseCollectionDb(config.stableCollectionDb);
             if (!config.stableOsuDb.empty()) {
-                auto beatmapData = stable::parseOsuDb(config.stableOsuDb);
-                stable::resolveBeatmaps(stableCollections, beatmapData);
+                stableBeatmapMap = stable::parseOsuDb(config.stableOsuDb);
+                stable::resolveBeatmaps(stableCollections, stableBeatmapMap);
             }
         } catch (const std::exception& error) {
             CROW_LOG_WARNING << "Failed loading stable data: " << error.what();
