@@ -4,7 +4,9 @@
 
 #include <cpprealm/sdk.hpp>
 
+#include <array>
 #include <chrono>
+#include <cstdio>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -111,5 +113,53 @@ namespace lazer {
             collections.push_back(std::move(collection));
         }
         return collections;
+    }
+
+    // Generate a random UUID v4 using /dev/urandom
+    inline realm::uuid generateUuid() {
+        std::array<uint8_t, 16> b{};
+        if (FILE* f = fopen("/dev/urandom", "rb")) {
+            fread(b.data(), 1, 16, f);
+            fclose(f);
+        }
+        b[6] = (b[6] & 0x0f) | 0x40;
+        b[8] = (b[8] & 0x3f) | 0x80;
+        char s[37];
+        snprintf(s, sizeof(s),
+            "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+            b[0],b[1],b[2],b[3], b[4],b[5], b[6],b[7],
+            b[8],b[9], b[10],b[11],b[12],b[13],b[14],b[15]);
+        return realm::uuid(s);
+    }
+
+    // Save collections back to lazer's client.realm.
+    // Uses additive_discovered mode so undeclared tables are preserved.
+    inline void saveCollections(const std::string& path, const std::vector<models::Collection>& collections) {
+        realm::db_config dbConfig;
+        dbConfig.set_path(path);
+        dbConfig.set_schema_version(46);
+        dbConfig.set_schema_mode(realm::db_config::schema_mode::additive_discovered);
+        auto db = realm::open<BeatmapCollection>(dbConfig);
+
+        db.write([&]() {
+            auto existing = db.objects<BeatmapCollection>();
+            size_t count = existing.size();
+            for (size_t i = 0; i < count; ++i) {
+                auto obj = existing[0];
+                db.remove(obj);
+            }
+
+            for (const auto& col : collections) {
+                BeatmapCollection entry;
+                entry.ID            = generateUuid();
+                entry.Name          = col.name;
+                entry.LastModified  = std::chrono::system_clock::now();
+                std::vector<std::optional<std::string>> hashes;
+                hashes.reserve(col.hashes.size());
+                for (const auto& h : col.hashes) hashes.push_back(h);
+                entry.BeatmapMD5Hashes = std::move(hashes);
+                db.add(std::move(entry));
+            }
+        });
     }
 }
