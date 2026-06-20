@@ -22,7 +22,7 @@ yay -S collection-manager-git
 git clone --recurse-submodules https://github.com/your-username/collection-manager.git
 cd collection-manager
 cmake --preset x86-debug-linux
-cmake --build --preset x86-debug-linux
+cmake --build --target collection-manager --preset x86-debug-linux
 ```
 
 If you forgot `--recurse-submodules`:
