@@ -6,6 +6,8 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 set(CMAKE_BUILD_PARALLEL_LEVEL 16)
 set(CMAKE_POLICY_DEFAULT_CMP0177 NEW)
 
+set(REALM_NO_TESTS)
+
 # Dependencies
 include(FetchContent)
 macro(fetch name repo tag)
